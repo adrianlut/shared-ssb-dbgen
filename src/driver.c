@@ -320,6 +320,11 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
     target->sums = (long *) malloc(sizeof(long) * merchant_count);
     MALLOC_CHECK(target->sums)
 
+    target->part_owners = (part_owner *) malloc(sizeof(part_owner) * merchant_count * parts_per_merchant);
+    MALLOC_CHECK(target->part_owners);
+
+    int part_owner_index = 0;
+
     int * merchant_counter = (int *) malloc(sizeof(int) * merchant_count);
     MALLOC_CHECK(merchant_counter)
 
@@ -335,9 +340,10 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
             printf("cannot divide customers evenly between merchants!");
             exit(1);
         }
-        target->parts[part_index].size = total_count * source_distribution->list[part_index].weight_single / source_distribution->max;
 
+        target->parts[part_index].size = total_count * source_distribution->list[part_index].weight_single / source_distribution->max;
         target->parts[part_index].name = source_distribution->list[part_index].text;
+
         unsigned long name_len = strlen(target->parts[part_index].name);
         long per_merchant_size = target->parts[part_index].size / name_len;
         for (int merchant_index = 0; merchant_index < merchant_count; ++merchant_index) {
@@ -346,6 +352,9 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
                 target->sums[merchant_index] += per_merchant_size;
                 cumsum += per_merchant_size;
                 target->cum_sums[merchant_index * parts_per_merchant + merchant_counter[merchant_index]] = cumsum;
+                target->part_owners[part_owner_index].index = cumsum;
+                target->part_owners[part_owner_index].owner = merchant_index;
+                ++part_owner_index;
                 ++(merchant_counter[merchant_index]);
             }
         }

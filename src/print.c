@@ -152,7 +152,8 @@ pr_cust(customer_t *c, int mode) {
     PR_STR(fp, c->nation_name, C_NATION_NAME_LEN);
     PR_STR(fp, c->region_name, C_REGION_NAME_LEN);
     PR_STR(fp, c->phone, PHONE_LEN);
-    PR_VSTR_LAST(fp, c->mktsegment, MAXAGG_LEN);
+    PR_VSTR(fp, c->mktsegment, MAXAGG_LEN);
+    PR_INT_LAST(fp, c->merchant_id);
     PR_END(fp);
 
     return (0);

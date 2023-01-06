@@ -131,6 +131,11 @@ typedef struct {
 } distribution;
 
 typedef struct {
+    long index;
+    int owner;
+} part_owner;
+
+typedef struct {
     long size;
     char *name;
 } distribution_part;
@@ -143,6 +148,7 @@ typedef struct {
     long * sums;
     long * cum_sums;
     long * borders;
+    part_owner *part_owners;
 } merchant_distribution;
 
 /*

@@ -103,6 +103,14 @@ gen_category(char *target, long seed){
 } 
 */
 
+int lookup_merchant(merchant_distribution * md, long id) {
+    for (int i = 0; i < md->merchant_count * md->parts_per_merchant; ++i) {
+        if (id - md->part_owners[i].index <= 0) {
+            return md->part_owners[i].owner;
+        }
+    }
+}
+
 long mk_cust(long n_cust, customer_t *c) {
     long i;
     c->custkey = n_cust;
@@ -114,6 +122,7 @@ long mk_cust(long n_cust, customer_t *c) {
     gen_city(c->city, c->nation_name);
     gen_phone(i, c->phone, (long) C_PHNE_SD);
     pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
+    c->merchant_id = lookup_merchant(&m_cust_distribution, n_cust);
     return (0);
 }
 
