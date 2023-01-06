@@ -7,8 +7,7 @@
 #ifndef DSS_H
 #define  DSS_H
 
-#ifdef SSB
-#define NAME			"SSB (Star Schema Benchmark)"
+#define NAME            "SSB (Star Schema Benchmark)"
 #define VERSION           1
 #define RELEASE           0
 #define MODIFICATION      0
@@ -23,22 +22,7 @@
 #define  L_SKEY_MIN   1
 #define  L_SKEY_MAX (tdefs[SUPP].base * scale)
 
-#endif
 
-#ifdef TPCH
-#define NAME			"TPC-H"
-#define VERSION           1
-#define RELEASE           3
-#define MODIFICATION      0
-#define PATCH             ""
-#endif
-#ifdef TPCR
-#define NAME			"TPC-R"
-#define VERSION           1
-#define RELEASE           3
-#define MODIFICATION      0
-#define PATCH             ""
-#endif
 #ifndef NAME
 #error Benchmark version must be defined in config.h
 #endif
@@ -50,25 +34,26 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef SSB
-#include <math.h>
-#endif
 
-#define  NONE		-1
-#define  PART		0
-#define  PSUPP		1
-#define  SUPP		2
-#define  CUST		3
-#define  ORDER		4
-#define  LINE		5
+
+#include <math.h>
+
+
+#define  NONE        (-1)
+#define  PART        0
+#define  PSUPP        1
+#define  SUPP        2
+#define  CUST        3
+#define  ORDER        4
+#define  LINE        5
 #define  ORDER_LINE     6
 #define  PART_PSUPP     7
-#define  NATION		8
-#define  REGION		9
-#define  UPDATE		10
-#define  MAX_TABLE	11
-#define  ONE_STREAM	1
-#define  ADD_AT_END	2
+#define  NATION        8
+#define  REGION        9
+#define  UPDATE        10
+#define  MAX_TABLE    11
+#define  ONE_STREAM    1
+#define  ADD_AT_END    2
 
 #ifdef MAX
 #undef MAX
@@ -76,8 +61,8 @@
 #ifdef MIN
 #undef MIN
 #endif
-#define MAX(a,b) ((a > b )?a:b)
-#define MIN(A,B)  ( (A) < (B) ? (A) : (B))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(A, B)  (((A) < (B)) ? (A) : (B))
 
 #ifndef UNUSED
 #define UNUSED(x) (void) x
@@ -117,64 +102,62 @@
 #define  MK_SPARSE(key, seq) \
          (((((key>>3)<<2)|(seq & 0x0003))<<3)|(key & 0x0007))
 
-#define RANDOM(tgt, lower, upper, stream)	dss_random(&tgt, (long) lower, (long) upper, (long) stream)
-#ifdef SSB
-typedef struct{
-  char * name;
-  int start_day;
-  int start_month;
-  int end_day;
-  int end_month;
+#define RANDOM(tgt, lower, upper, stream)    dss_random(&tgt, (long) lower, (long) upper, (long) stream)
+typedef struct {
+    char *name;
+    int start_day;
+    int start_month;
+    int end_day;
+    int end_month;
 } season;
 typedef struct {
-  char * name;
-  int month;
-  int day;
+    char *name;
+    int month;
+    int day;
 } holiday;
 
 
-#endif	
-     
+typedef struct {
+    long weight;
+    char *text;
+} set_member;
 
-typedef struct
-{
-   long      weight;
-   char     *text;
-}         set_member;
-
-typedef struct
-{
-   int      count;
-   int      max;
-   set_member *list;
-   long *permute;
-}         distribution;
+typedef struct {
+    int count;
+    int max;
+    set_member *list;
+    long *permute;
+} distribution;
 
 /*
  * some handy access functions 
  */
-#define DIST_SIZE(d)		d->count
-#define DIST_MEMBER(d, i)	((set_member *)((d)->list + i))->text
+#define DIST_SIZE(d)        d->count
+#define DIST_MEMBER(d, i)    ((set_member *)((d)->list + i))->text
 
-typedef struct
-{
-   char     *name;
-   char     *comment;
-   long      base;
-   int       (*header) ();
-   int       (*loader[2]) ();
-   long      (*gen_seed)();
-   int       (*verify) ();
-   int       child;
-   unsigned long vtotal;
-}         tdef;
+typedef struct {
+    char *name;
+    char *comment;
+    long base;
+
+    int (*header)();
+
+    int (*loader[2])();
+
+    long (*gen_seed)();
+
+    int (*verify)();
+
+    int child;
+    unsigned long vtotal;
+} tdef;
 
 typedef struct SEED_T {
-	long table;
-	long value;
-	long usage;
-	long boundary;
-	} seed_t;
+    long table;
+    long value;
+    long usage;
+    long boundary;
+} seed_t;
 
 
 #if defined(__STDC__)
@@ -184,40 +167,61 @@ typedef struct SEED_T {
 #endif
 
 /* bm_utils.c */
-char	*env_config PROTO((char *var, char *dflt));
-long	yes_no PROTO((char *prompt));
-int     a_rnd PROTO((int min, int max, int column, char *dest));
-int     tx_rnd PROTO((long min, long max, long column, char *tgt));
-long	julian PROTO((long date));
-long	unjulian PROTO((long date));
-FILE	*tbl_open PROTO((int tbl, char *mode));
-long	dssncasecmp PROTO((char *s1, char *s2, int n));
-long	dsscasecmp PROTO((char *s1, char *s2));
-int		pick_str PROTO((distribution * s, int c, char *target));
-void	agg_str PROTO((distribution *set, long count, long col, char *dest));
-void	read_dist PROTO((char *path, char *name, distribution * target));
-void	embed_str PROTO((distribution *d, int min, int max, int stream, char *dest));
+char *env_config PROTO((char *var, char *dflt));
+
+long yes_no PROTO((char *prompt));
+
+int a_rnd PROTO((int min, int max, int column, char *dest));
+
+int tx_rnd PROTO((long min, long max, long column, char *tgt));
+
+long julian PROTO((long date));
+
+long unjulian PROTO((long date));
+
+FILE *tbl_open PROTO((int tbl, char *mode));
+
+long dssncasecmp PROTO((char *s1, char *s2, int n));
+
+long dsscasecmp PROTO((char *s1, char *s2));
+
+int pick_str PROTO((distribution * s, int c, char *target));
+
+void agg_str PROTO((distribution * set, long count, long col, char *dest));
+
+void read_dist PROTO((char *path, char *name, distribution * target));
+
+void embed_str PROTO((distribution * d, int min, int max, int stream, char *dest));
+
 #ifndef HAVE_GETOPT
 int		getopt PROTO((int arg_cnt, char **arg_vect, char *options));
 #endif /* HAVE_GETOPT */
-long	set_state PROTO((int t, long scale, long procs, long step, long *e));
+
+long set_state PROTO((int t, long scale, long procs, long step, long *e));
 
 /* rnd.c */
-long	NextRand PROTO((long nSeed));
-long	UnifInt PROTO((long nLow, long nHigh, long nStream));
-double	UnifReal PROTO((double dLow, double dHigh, long nStream));
-double	Exponential PROTO((double dMean, long nStream));
-void	dss_random(long *tgt, long min, long max, long seed);
-void	row_start(int t);
-void	row_stop(int t);
-void	dump_seeds(int t);
+long NextRand PROTO((long nSeed));
+
+long UnifInt PROTO((long nLow, long nHigh, long nStream));
+
+double UnifReal PROTO((double dLow, double dHigh, long nStream));
+
+double Exponential PROTO((double dMean, long nStream));
+
+void dss_random(long *tgt, long min, long max, long seed);
+
+void row_start(int t);
+
+void row_stop(int t);
+
+void dump_seeds(int t);
 
 /* text.c */
-#define MAX_GRAMMAR_LEN	12	/* max length of grammar component */
-#define MAX_SENT_LEN	256 /* max length of populated sentence */
-#define RNG_PER_SENT	27	/* max number of RNG calls per sentence */
+#define MAX_GRAMMAR_LEN    12    /* max length of grammar component */
+#define MAX_SENT_LEN    256 /* max length of populated sentence */
+#define RNG_PER_SENT    27    /* max number of RNG calls per sentence */
 
-int		dbg_text PROTO((char * t, int min, int max, int s));
+int dbg_text PROTO((char * t, int min, int max, int s));
 
 #ifdef DECLARER
 #define EXTERN
@@ -265,12 +269,12 @@ EXTERN long updates;
 EXTERN long table;
 EXTERN long children;
 EXTERN long fnames;
-EXTERN int  gen_sql;
-EXTERN int  gen_rng;
+EXTERN int gen_sql;
+EXTERN int gen_rng;
 EXTERN char *db_name;
-EXTERN int  step;
-EXTERN int	set_seeds;
-EXTERN int  validate;
+EXTERN int step;
+EXTERN int set_seeds;
+EXTERN int validate;
 EXTERN char *d_path;
 
 /* added for segmented updates */
@@ -279,7 +283,7 @@ EXTERN int delete_segments;
 EXTERN int insert_orders_segment;
 EXTERN int insert_lineitem_segment;
 EXTERN int delete_segment;
- 
+
 
 #ifndef DECLARER
 extern tdef tdefs[];
@@ -299,11 +303,7 @@ extern tdef tdefs[];
  * defines which control the parts table
  */
 #define  P_SIZE       126
-#ifdef SSB
 #define  P_NAME_SCL   3     /*5 change to 3 according to the new schema*/
-#else
-#define  P_NAME_SCL   5
-#endif
 #define  P_MFG_TAG    "Manufacturer#"
 #define  P_MFG_FMT     "%s%01ld"
 #define  P_MFG_MIN     1
@@ -334,7 +334,7 @@ extern tdef tdefs[];
 #define  S_NAME_FMT "%s%09ld"
 #define  S_ABAL_MIN   -99999
 #define  S_ABAL_MAX    999999
-#define  S_CMNT_MAX    101      
+#define  S_CMNT_MAX    101
 #define  S_CMNT_BBB    10       /* number of BBB comments/SF */
 #define  BBB_DEADBEATS 50       /* % that are complaints */
 #define  BBB_BASE  "Customer "
@@ -390,12 +390,8 @@ extern tdef tdefs[];
 #define  L_DCNT_MAX   10
 #define  L_PKEY_MIN   1
 
-#ifdef SSB
 /*part table log based*/
 #define  L_PKEY_MAX   (tdefs[PART].base * (floor(log((double)scale))+1))
-#else
-#define  L_PKEY_MAX   (tdefs[PART].base * scale)
-#endif
 
 #define  L_SDTE_MIN   1
 #define  L_SDTE_MAX   121
@@ -427,11 +423,7 @@ extern tdef tdefs[];
 #define  ENDDATE      98365
 #define  TOTDATE      2557
 #define  UPD_PCT      10
-#ifdef SSB
 #define  MAX_STREAM   49
-#else
-#define  MAX_STREAM   47
-#endif
 
 #define  V_STR_LOW    0.4
 #define  PENNIES    100 /* for scaled int money arithmetic */
@@ -445,104 +437,75 @@ extern tdef tdefs[];
  * beyond this point we need to allow for BCD calculations
  */
 #define  MAX_32B_SCALE   1000.0
-#define INIT_HUGE(v)	{ \
-			v = (DSS_HUGE *)malloc(sizeof(DSS_HUGE) * HUGE_COUNT); \
-			MALLOC_CHECK(v); \
-			}
-#define FREE_HUGE(v)	free(v)
-#ifdef SUPPORT_64BITS
-#define LONG2HUGE(src, dst)		*dst = (DSS_HUGE)src	
-#define HUGE2LONG(src, dst)		*dst = (long)src
-#define HUGE_SET(src, dst)		*dst = *src	
-#define HUGE_MUL(op1, op2)		*op1 *= op2	
-#define HUGE_DIV(op1, op2)		*op1 /= op2	
-#define HUGE_ADD(op1, op2, dst)	*dst = *op1 + op2	
-#define HUGE_SUB(op1, op2, dst)	*dst = *op1 - op2	
-#define HUGE_MOD(op1, op2)		*op1 % op2	
-#define HUGE_CMP(op1, op2)		(*op1 == *op2)?0:(*op1 < *op2)-1:1
-#else
-#define LONG2HUGE(src, dst)		{*dst = src; *(dst + 1) = 0;}
-#define HUGE2LONG(src, dst)		{ dst=0 ; \
-					bcd2_bin(dst, (src + 1)); \
-					bcd2_bin(dst, src); }
-#define HUGE_SET(src, dst)		{ *dst = *src ; *(dst + 1) = *(src + 1); }
-#define HUGE_MUL(op1,op2)		bcd2_mul(op1, (op1 + 1), op2)
-#define HUGE_DIV(op1,op2)		bcd2_div(op1, (op1 + 1), op2)
-#define HUGE_ADD(op1,op2,d)		{ \
-					HUGE_SET(op1, d); \
-					bcd2_add(d, (d + 1), op2); \
-					}
-#define HUGE_SUB(op1,op2,d)		{ \
-					HUGE_SET(op1, d); \
-					bcd2_sub(d, (d + 1), op2); \
-					}
-#define HUGE_MOD(op1, op2)		bcd2_mod(op1, (op1 + 1), op2)
-#define HUGE_CMP(op1, op2)		(bcd2_cmp(op1, (op1 + 1), op2) == 0)?0:\
-					    ((bcd2_cmp(op1, (op1 + 1), op2) < 0)?-1:1)
-#endif /* SUPPORT_64BITS */
+#define INIT_HUGE(v)    { \
+            v = (DSS_HUGE *)malloc(sizeof(DSS_HUGE) * HUGE_COUNT); \
+            MALLOC_CHECK(v); \
+            }
+#define FREE_HUGE(v)    free(v)
+#define LONG2HUGE(src, dst)        *dst = (DSS_HUGE)src
+#define HUGE2LONG(src, dst)        *dst = (long)src
+#define HUGE_SET(src, dst)        *dst = *src
+#define HUGE_MUL(op1, op2)        *op1 *= op2
+#define HUGE_DIV(op1, op2)        *op1 /= op2
+#define HUGE_ADD(op1, op2, dst)    *dst = *op1 + op2
+#define HUGE_SUB(op1, op2, dst)    *dst = *op1 - op2
+#define HUGE_MOD(op1, op2)        *op1 % op2
+#define HUGE_CMP(op1, op2)        (*op1 == *op2)?0:(*op1 < *op2)-1:1
 
 /******** environmental variables and defaults ***************/
-#define  DIST_TAG  "DSS_DIST"		/* environment var to override ... */
-#define  DIST_DFLT "dists.dss"		/* default file to hold distributions */
-#define  PATH_TAG  "DSS_PATH"		/* environment var to override ... */
-#define  PATH_DFLT "."				/* default directory to hold tables */
-#define  CONFIG_TAG  "DSS_CONFIG"	/* environment var to override ... */
-#define  CONFIG_DFLT "."			/* default directory to config files */
-#define  ADHOC_TAG  "DSS_ADHOC"		/* environment var to override ... */
-#define  ADHOC_DFLT "adhoc.dss"		/* default file name for adhoc vars */
+#define  DIST_TAG  "DSS_DIST"        /* environment var to override ... */
+#define  DIST_DFLT "dists.dss"        /* default file to hold distributions */
+#define  PATH_TAG  "DSS_PATH"        /* environment var to override ... */
+#define  PATH_DFLT "."                /* default directory to hold tables */
+#define  CONFIG_TAG  "DSS_CONFIG"    /* environment var to override ... */
+#define  CONFIG_DFLT "."            /* default directory to config files */
+#define  ADHOC_TAG  "DSS_ADHOC"        /* environment var to override ... */
+#define  ADHOC_DFLT "adhoc.dss"        /* default file name for adhoc vars */
 
 /******* output macros ********/
 
 /* SEPARATOR, the field separator, has moved to config.h */
 
 /* Data type flags for a single print routine */
-#define DT_STR		0
+#define DT_STR        0
 #ifndef MVS
-#define DT_VSTR		DT_STR
+#define DT_VSTR        DT_STR
 #else
 #define DT_VSTR		1
 #endif /* MVS */
-#define DT_INT		2
-#define DT_HUGE		3
-#define DT_KEY		4
-#define DT_MONEY	5
-#define DT_CHR		6
+#define DT_INT        2
+#define DT_HUGE        3
+#define DT_KEY        4
+#define DT_MONEY    5
+#define DT_CHR        6
 
 int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
-#define PR_STR(f, str, len)		dbg_print(DT_STR, f, (void *)str, len, 1)
-#define PR_VSTR(f, str, len) 	dbg_print(DT_VSTR, f, (void *)str, len, 1)
-#define PR_VSTR_LAST(f, str, len) 	dbg_print(DT_VSTR, f, (void *)str, len, 0)
-#define PR_INT(f, val) 			{ long tmp = val; dbg_print(DT_INT,   f, &tmp, 0, 1);  }
-#define PR_HUGE(f, val) 		dbg_print(DT_HUGE, f, (void *)val, 0, 1)
-#define PR_KEY(f, val) 			{ long tmp = val; dbg_print(DT_KEY,   f, &tmp, 0, -1); }
-#define PR_MONEY(f, val) 		{ long tmp = val; dbg_print(DT_MONEY, f, &tmp, 0, 1);  }
-#define PR_CHR(f, val)	 		{ char tmp = val; dbg_print(DT_CHR,   f, &tmp, 0, 1);  }
+
+#define PR_STR(f, str, len)        dbg_print(DT_STR, f, (void *)str, len, 1)
+#define PR_VSTR(f, str, len)    dbg_print(DT_VSTR, f, (void *)str, len, 1)
+#define PR_VSTR_LAST(f, str, len)    dbg_print(DT_VSTR, f, (void *)str, len, 0)
+#define PR_INT(f, val)            { long tmp = val; dbg_print(DT_INT,   f, &tmp, 0, 1);  }
+#define PR_HUGE(f, val)        dbg_print(DT_HUGE, f, (void *)val, 0, 1)
+#define PR_KEY(f, val)            { long tmp = val; dbg_print(DT_KEY,   f, &tmp, 0, -1); }
+#define PR_MONEY(f, val)        { long tmp = val; dbg_print(DT_MONEY, f, &tmp, 0, 1);  }
+#define PR_CHR(f, val)            { char tmp = val; dbg_print(DT_CHR,   f, &tmp, 0, 1);  }
 #define  PR_STRT(fp)   /* any line prep for a record goes here */
 #define  PR_END(fp)    fprintf(fp, "\n")   /* finish the record here */
 
 
-#ifdef SSB
 #ifdef YMD_DASH_DATE
 #define  PR_DATE(tgt, yr, mn, dy) { \
-	int yr_  = yr; \
-	int mn_  = mn; \
-	int dy_  = dy; \
+    int yr_  = yr; \
+    int mn_  = mn; \
+    int dy_  = dy; \
   snprintf(tgt, 2+1+2+1+4+1, "19%02d-%02d-%02d",yr_, mn_, dy_); \
 }
 #else
 #define  PR_DATE(tgt, yr, mn, dy) { \
-	int yr_  = yr; \
-	int mn_  = mn; \
-	int dy_  = dy; \
-	snprintf(tgt, 4+2+2+1, "19%02d%02d%02d", yr_, mn_, dy_); \
-}
-#endif
-#else
-#define  PR_DATE(tgt, yr, mn, dy) { \
-	int yr_  = yr; \
-	int mn_  = mn; \
-	int dy_  = dy; \
-	snprintf(tgt, 2+1+2+1+4+1, "%02d-%02d-19%02d", yr_, mn_, dy_) \
+    int yr_  = yr; \
+    int mn_  = mn; \
+    int dy_  = dy; \
+    snprintf(tgt, 4+2+2+1, "19%02d%02d%02d", yr_, mn_, dy_); \
 }
 #endif
 
@@ -550,20 +513,20 @@ int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
  * verification macros
  */
 #define  VRF_STR(t, d) {char *xx = d; while (*xx) tdefs[t].vtotal += *xx++;}
-#define  VRF_INT(t,d)  tdefs[t].vtotal += d
+#define  VRF_INT(t, d)  tdefs[t].vtotal += d
 /* The following conditional definition is not necessary by this point, since
  * d is already a DSS_HUGE in the contexts in which this macro is expanded.
  */
 // #ifdef SUPPORT_64BITS
 // #define  VRF_HUGE(t,d)	tdefs[t].vtotal = *((DSS_HUGE *)&d) + *((DSS_HUGE *)(&d + 1))
 // #else
-#define VRF_HUGE(t,d)	tdefs[t].vtotal += (unsigned long) (d[0] + d[1])
+#define VRF_HUGE(t, d)    tdefs[t].vtotal += (unsigned long) (d[0] + d[1])
 // #endif /* SUPPORT_64BITS */
 /* assume float is a 64 bit quantity */
-#define  VRF_MONEY(t,d)	tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
-#define  VRF_CHR(t,d)	tdefs[t].vtotal += d
-#define  VRF_STRT(t)  
-#define  VRF_END(t)  
+#define  VRF_MONEY(t, d)    tdefs[t].vtotal = *((long *)&d) + *((long *)(&d + 1))
+#define  VRF_CHR(t, d)    tdefs[t].vtotal += d
+#define  VRF_STRT(t)
+#define  VRF_END(t)
 
 /*********** distribuitons currently defined *************/
 #define  UNIFORM   0
@@ -607,14 +570,12 @@ int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
 #define  N_CMNT_SD 41
 #define  R_CMNT_SD 42
 #define  O_LCNT_SD 43
-#define  BBB_JNK_SD    44          
-#define  BBB_TYPE_SD   45         
-#define  BBB_CMNT_SD   46         
-#define  BBB_OFFSET_SD 47         
-#ifdef SSB
+#define  BBB_JNK_SD    44
+#define  BBB_TYPE_SD   45
+#define  BBB_CMNT_SD   46
+#define  BBB_OFFSET_SD 47
 #define  P_CAT_SD  48
 #define  P_CITY_SD 49
-#endif
 
 #endif            /* DSS_H */
 
