@@ -332,7 +332,7 @@ extern tdef tdefs[];
 #define  S_SIZE     145
 #define  S_NAME_TAG "Supplier#"
 #define  S_NAME_FMT "%s%09ld"
-#define  S_ABAL_MIN   -99999
+#define  S_ABAL_MIN   (-99999)
 #define  S_ABAL_MAX    999999
 #define  S_CMNT_MAX    101
 #define  S_CMNT_BBB    10       /* number of BBB comments/SF */
@@ -361,7 +361,7 @@ extern tdef tdefs[];
 #define  C_NAME_TAG   "Customer#"
 #define  C_NAME_FMT   "%s%09ld"
 #define  C_MSEG_MAX    5
-#define  C_ABAL_MIN   -99999
+#define  C_ABAL_MIN   (-99999)
 #define  C_ABAL_MAX    999999
 /*
  * defines which control the order table
@@ -450,7 +450,7 @@ extern tdef tdefs[];
 #define HUGE_ADD(op1, op2, dst)    *dst = *op1 + op2
 #define HUGE_SUB(op1, op2, dst)    *dst = *op1 - op2
 #define HUGE_MOD(op1, op2)        *op1 % op2
-#define HUGE_CMP(op1, op2)        (*op1 == *op2)?0:(*op1 < *op2)-1:1
+#define HUGE_CMP(op1, op2)        (*op1 == *op2) ? 0 : ((*op1 < *op2)-1) : 1
 
 /******** environmental variables and defaults ***************/
 #define  DIST_TAG  "DSS_DIST"        /* environment var to override ... */

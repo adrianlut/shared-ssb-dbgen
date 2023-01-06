@@ -1,5 +1,5 @@
 /* @(#)driver.c	2.1.8.4 */
-/* main driver for dss banchmark */
+/* main driver for dss benchmark */
 
 #define DECLARER                /* EXTERN references get defined here */
 #define NO_FUNC (int (*) ()) NULL    /* to clean up tdefs */
@@ -13,18 +13,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <limits.h>
 #include <math.h>
 #include <ctype.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
-
-#ifdef HAVE_SYS_TYPES_H
-
-#include <sys/types.h>
-
-#endif /* HAVE_SYS_TYPES_H */
 
 #ifdef HAVE_STRINGS_H
 
@@ -39,12 +32,6 @@
 #elif (!defined(HAVE_GETOPT))
 int     getopt(int arg_cnt, char **arg_vect, char *options);
 #endif /* (!defined(STDLIB_HAS_GETOPT) && defined(HAVE_GETOPT_H)) */
-
-#ifdef HAVE_SYS_TYPES_H
-
-#include <sys/types.h>
-
-#endif
 
 #ifdef HAVE_UNISTD_H
 
@@ -242,9 +229,8 @@ tdef tdefs[] =
 
 int *pids;
 
-
 /*
-* routines to handle the graceful cleanup of multi-process loads
+* routines to handle the graceful cleanup of multiprocess loads
 */
 
 void
@@ -255,7 +241,7 @@ stop_proc(int signum) {
 
 /*
  * Notes:
- * The parallell load code is at best brittle, and seems not to 
+ * The parallel load code is at best brittle, and seems not to
  * have been tested or even built on non-Linux platforms.
  */
 
@@ -269,7 +255,6 @@ kill_load(void) {
         if (pids[i])
             kill(SIGUSR1, pids[i]);
     }
-    return;
 }
 
 #endif
@@ -440,6 +425,8 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
                         tdefs[tnum].loader[direct](&dt, 0);
                 }
                 break;
+            default:
+                printf("Unknown table in gen_tbl!\n");
         }
         row_stop(tnum);
         if (set_seeds && (i % tdefs[tnum].base) < 2) {
