@@ -105,19 +105,7 @@ dbg_print(int format, FILE *target, void *data, int len, int sep)
 			fprintf(target, "%ld", *(long *)data);
 		break;
 	case DT_HUGE:
-#ifndef SUPPORT_64BITS
-		/* Note: Next block seems to assume little-endian memory order */
-        if (*((long *)data + 1) == 0) \
-           if (columnar) fprintf(target, "%12ld", *(long *)data);
-           else fprintf(target, "%ld", *(long *)data);
-        else
-           if (columnar) fprintf(target, "%5ld%07ld", 
-				*((long *)data + 1), *(long *)data);
-           else fprintf(target,"%ld%07ld", 
-				*((long *)data + 1), *(long *)data);
-#else
 		fprintf(target, HUGE_FORMAT, *(DSS_HUGE *)data);
-#endif /* SUPPORT_64BITS */
 		break;
 	case DT_KEY:
 		fprintf(target, "%ld", *(long *)data);
@@ -153,7 +141,6 @@ dbg_print(int format, FILE *target, void *data, int len, int sep)
 	return(0);
 }
 
-#ifdef SSB
 int
 pr_cust(customer_t *c, int mode)
 {
@@ -178,72 +165,15 @@ static FILE *fp = NULL;
    return(0);
 }
 
-#else
-int
-pr_cust(customer_t *c, int mode)
-{
-static FILE *fp = NULL;
-        
-   if (fp == NULL)
-        fp = print_prep(CUST, 0);
-
-   PR_STRT(fp);
-   PR_INT(fp, c->custkey);
-   PR_VSTR(fp, c->name, C_NAME_LEN);
-   PR_VSTR(fp, c->address, 
-       (columnar)?(long)(ceil(C_ADDR_LEN * V_STR_HGH)):c->alen);
-   PR_INT(fp, c->nation_code);
-   PR_STR(fp, c->phone, PHONE_LEN);
-   PR_MONEY(fp, c->acctbal);
-   PR_STR(fp, c->mktsegment, C_MSEG_LEN);
-   PR_VSTR_LAST(fp, c->comment, 
-       (columnar)?(long)(ceil(C_CMNT_LEN * V_STR_HGH)):c->clen);
-   PR_END(fp);
-
-   return(0);
-}
-#endif
 
 /*
  * print the numbered order 
  */
-#ifdef SSB
 
-#else
-int
-pr_order(order_t *o, int mode)
-{
-    static FILE *fp_o = NULL;
-    static int last_mode = 0;
-        
-    if (fp_o == NULL || mode != last_mode)
-        {
-        if (fp_o) 
-            fclose(fp_o);
-        fp_o = print_prep(ORDER, mode);
-        last_mode = mode;
-        }
-    PR_STRT(fp_o);
-    PR_HUGE(fp_o, o->okey);
-    PR_INT(fp_o, o->custkey);
-    PR_CHR(fp_o, o->orderstatus);
-    PR_MONEY(fp_o, o->totalprice);
-    PR_STR(fp_o, o->odate, DATE_LEN);
-    PR_STR(fp_o, o->opriority, O_OPRIO_LEN);
-    PR_STR(fp_o, o->clerk, O_CLRK_LEN);
-    PR_INT(fp_o, o->spriority);
-    PR_VSTR_LAST(fp_o, o->comment, 
-       (columnar)?(long)(ceil(O_CMNT_LEN * V_STR_HGH)):o->clen);
-    PR_END(fp_o);
-
-    return(0);
-}
-#endif
 
 /*
  * print an order's lineitems
  */
-#ifdef SSB
 int
 pr_line(order_t *o, int mode)
 {
@@ -287,72 +217,14 @@ pr_line(order_t *o, int mode)
 
    return(0);
 }
-#else
-int
-pr_line(order_t *o, int mode)
-{
-    static FILE *fp_l = NULL;
-    static int last_mode = 0;
-    long      i;
-    int days;
-    char buf[100];
-
-    if (fp_l == NULL || mode != last_mode)
-        {
-        if (fp_l) 
-            fclose(fp_l);
-        fp_l = print_prep(LINE, mode);
-        last_mode = mode;
-        }
-
-    for (i = 0; i < o->lines; i++)
-        {
-        PR_STRT(fp_l);
-        PR_HUGE(fp_l, o->l[i].okey);
-        PR_INT(fp_l, o->l[i].partkey);
-        PR_INT(fp_l, o->l[i].suppkey);
-        PR_INT(fp_l, o->l[i].lcnt);
-        PR_INT(fp_l, o->l[i].quantity);
-        PR_MONEY(fp_l, o->l[i].eprice);
-        PR_MONEY(fp_l, o->l[i].discount);
-        PR_MONEY(fp_l, o->l[i].tax);
-        PR_CHR(fp_l, o->l[i].rflag[0]);
-        PR_CHR(fp_l, o->l[i].lstatus[0]);
-        PR_STR(fp_l, o->l[i].sdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].cdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].rdate, DATE_LEN);
-        PR_STR(fp_l, o->l[i].shipinstruct, L_INST_LEN);
-        PR_STR(fp_l, o->l[i].shipmode, L_SMODE_LEN);
-        PR_VSTR_LAST(fp_l, o->l[i].comment, 
-            (columnar)?(long)(ceil(L_CMNT_LEN *
-        V_STR_HGH)):o->l[i].clen);
-        PR_END(fp_l);
-        }
-
-   return(0);
-}
-#endif
 
 /*
  * print the numbered order *and* its associated lineitems
  */
-#ifdef SSB
-#else
-int
-pr_order_line(order_t *o, int mode)
-{
-    tdefs[ORDER].name = tdefs[ORDER_LINE].name;
-    pr_order(o, mode);
-    pr_line(o, mode);
-
-    return(0);
-}
-#endif
 
 /*
  * print the given part
  */
-#ifdef SSB
 int
 pr_part(part_t *part, int mode)
 {
@@ -380,84 +252,18 @@ pr_part(part_t *part, int mode)
     return(0);
 }
 
-#else
-int
-pr_part(part_t *part, int mode)
-{
-static FILE *p_fp = NULL;
-
-    if (p_fp == NULL)
-        p_fp = print_prep(PART, 0);
-
-   PR_STRT(p_fp);
-   PR_INT(p_fp, part->partkey);
-   PR_VSTR(p_fp, part->name,
-       (columnar)?(long)P_NAME_LEN:part->nlen);
-   PR_STR(p_fp, part->mfgr, P_MFG_LEN);
-   PR_STR(p_fp, part->brand, P_BRND_LEN);
-   PR_VSTR(p_fp, part->type,
-       (columnar)?(long)P_TYPE_LEN:part->tlen);
-   PR_INT(p_fp, part->size);
-   PR_STR(p_fp, part->container, P_CNTR_LEN);
-   PR_MONEY(p_fp, part->retailprice);
-   PR_VSTR_LAST(p_fp, part->comment, 
-       (columnar)?(long)(ceil(P_CMNT_LEN * V_STR_HGH)):part->clen);
-   PR_END(p_fp);
-
-   return(0);
-}
-#endif
 
 /*
  * print the given part's suppliers
  */
-#ifdef SSB
 /*SSB don't have partsupplier table*/       
-#else
-int
-pr_psupp(part_t *part, int mode)
-{
-    static FILE *ps_fp = NULL;
-    long      i;
-
-    if (ps_fp == NULL)
-        ps_fp = print_prep(PSUPP, mode);
-
-   for (i = 0; i < SUPP_PER_PART; i++)
-      {
-      PR_STRT(ps_fp);
-      PR_INT(ps_fp, part->s[i].partkey);
-      PR_INT(ps_fp, part->s[i].suppkey);
-      PR_INT(ps_fp, part->s[i].qty);
-      PR_MONEY(ps_fp, part->s[i].scost);
-      PR_VSTR_LAST(ps_fp, part->s[i].comment, 
-       (columnar)?(long)(ceil(PS_CMNT_LEN * V_STR_HGH)):part->s[i].clen);
-      PR_END(ps_fp);
-      }
-
-   return(0);
-}
-#endif
 
 /*
  * print the given part *and* its suppliers
  */
-#ifdef SSB
 /*SSB don't have partsupplier table*/       
-#else
-int
-pr_part_psupp(part_t *part, int mode)
-{
-    tdefs[PART].name = tdefs[PART_PSUPP].name;
-    pr_part(part, mode);
-    pr_psupp(part, mode);
-
-    return(0);
-}
-#endif
 
 
-#ifdef SSB
 int
 pr_supp(supplier_t *supp, int mode)
 {
@@ -480,70 +286,7 @@ pr_supp(supplier_t *supp, int mode)
 
     return(0);
 }
-#else
-int
-pr_supp(supplier_t *supp, int mode)
-{
-static FILE *fp = NULL;
-        
-   if (fp == NULL)
-        fp = print_prep(SUPP, mode);
 
-   PR_STRT(fp);
-   PR_INT(fp, supp->suppkey);
-   PR_STR(fp, supp->name, S_NAME_LEN);
-   PR_VSTR(fp, supp->address, 
-       (columnar)?(long)(ceil(S_ADDR_LEN * V_STR_HGH)):supp->alen);
-   PR_INT(fp, supp->nation_code);
-   PR_STR(fp, supp->phone, PHONE_LEN);
-   PR_MONEY(fp, supp->acctbal);
-   PR_VSTR_LAST(fp, supp->comment, 
-       (columnar)?(long)(ceil(S_CMNT_LEN * V_STR_HGH)):supp->clen);
-   PR_END(fp);
-
-   return(0);
-}
-#endif
-
-#ifdef SSB
-#else
-int
-pr_nation(code_t *c, int mode)
-{
-static FILE *fp = NULL;
-        
-   if (fp == NULL)
-        fp = print_prep(NATION, mode);
-
-   PR_STRT(fp);
-   PR_INT(fp, c->code);
-   PR_STR(fp, c->text, NATION_LEN);
-   PR_INT(fp, c->join);
-   PR_VSTR_LAST(fp, c->comment, 
-       (columnar)?(long)(ceil(N_CMNT_LEN * V_STR_HGH)):c->clen);
-   PR_END(fp);
-
-   return(0);
-}
-
-int
-pr_region(code_t *c, int mode)
-{
-static FILE *fp = NULL;
-        
-   if (fp == NULL)
-        fp = print_prep(REGION, mode);
-
-   PR_STRT(fp);
-   PR_INT(fp, c->code);
-   PR_STR(fp, c->text, REGION_LEN);
-   PR_VSTR_LAST(fp, c->comment, 
-       (columnar)?(long)(ceil(R_CMNT_LEN * V_STR_HGH)):c->clen);
-   PR_END(fp);
-
-   return(0);
-}
-#endif
 
 /* 
  * NOTE: this routine does NOT use the BCD2_* routines. As a result,
@@ -653,7 +396,6 @@ pr_drange(int tbl, DSS_HUGE min, DSS_HUGE cnt, long num)
     return(0);
 }
 
-#ifdef SSB
 int pr_date(date_t *d, int mode){
     static FILE *d_fp = NULL;
     
@@ -695,13 +437,11 @@ int pr_date(date_t *d, int mode){
 
 }
 
-#endif
 /*
  * verify functions: routines which replace the pr_routines and generate a pseudo checksum 
  * instead of generating the actual contents of the tables. Meant to allow large scale data 
  * validation without requiring a large amount of storage
  */
-#ifdef SSB
 int
 vrf_cust(customer_t *c, int mode)
 {
@@ -720,53 +460,14 @@ vrf_cust(customer_t *c, int mode)
    return(0);
 }
 
-#else
-int
-vrf_cust(customer_t *c, int mode)
-{
-   VRF_STRT(CUST);
-   VRF_INT(CUST, c->custkey);
-   VRF_STR(CUST, c->name);
-   VRF_STR(CUST, c->address);
-   VRF_INT(CUST, c->nation_code);
-   VRF_STR(CUST, c->phone);
-   VRF_MONEY(CUST, c->acctbal);
-   VRF_STR(CUST, c->mktsegment);
-   VRF_STR(CUST, c->comment);
-   VRF_END(CUST);
-
-   return(0);
-}
-#endif
 
 /*
  * print the numbered order 
  */
-#ifdef SSB
-#else
-int
-vrf_order(order_t *o, int mode)
-{
-    VRF_STRT(ORDER);
-    VRF_HUGE(ORDER, o->okey);
-    VRF_INT(ORDER, o->custkey);
-    VRF_CHR(ORDER, o->orderstatus);
-    VRF_MONEY(ORDER, o->totalprice);
-    VRF_STR(ORDER, o->odate);
-    VRF_STR(ORDER, o->opriority);
-    VRF_STR(ORDER, o->clerk);
-    VRF_INT(ORDER, o->spriority);
-    VRF_STR(ORDER, o->comment);
-    VRF_END(ORDER);
-
-    return(0);
-}
-#endif
 
 /*
  * print an order's lineitems
  */
-#ifdef SSB
 int
 vrf_line(order_t *o, int mode)
 {
@@ -799,57 +500,14 @@ vrf_line(order_t *o, int mode)
     return(0);
 }
 
-#else
-int
-vrf_line(order_t *o, int mode)
-{
-	int i;
-
-    for (i = 0; i < o->lines; i++)
-        {
-        VRF_STRT(LINE);
-        VRF_HUGE(LINE, o->l[i].okey);
-        VRF_INT(LINE, o->l[i].partkey);
-        VRF_INT(LINE, o->l[i].suppkey);
-        VRF_INT(LINE, o->l[i].lcnt);
-        VRF_INT(LINE, o->l[i].quantity);
-        VRF_MONEY(LINE, o->l[i].eprice);
-        VRF_MONEY(LINE, o->l[i].discount);
-        VRF_MONEY(LINE, o->l[i].tax);
-        VRF_CHR(LINE, o->l[i].rflag[0]);
-        VRF_CHR(LINE, o->l[i].lstatus[0]);
-        VRF_STR(LINE, o->l[i].sdate);
-        VRF_STR(LINE, o->l[i].cdate);
-        VRF_STR(LINE, o->l[i].rdate);
-        VRF_STR(LINE, o->l[i].shipinstruct);
-        VRF_STR(LINE, o->l[i].shipmode);
-        VRF_STR(LINE, o->l[i].comment);
-        VRF_END(LINE);
-        }
-
-   return(0);
-}
-#endif
 
 /*
  * print the numbered order *and* its associated lineitems
  */
-#ifdef SSB
-#else
-int
-vrf_order_line(order_t *o, int mode)
-{
-    vrf_order(o, mode);
-    vrf_line(o, mode);
-
-    return(0);
-}
-#endif
 
 /*
  * print the given part
  */
-#ifdef SSB
 int
 vrf_part(part_t *part, int mode)
 {
@@ -869,68 +527,15 @@ vrf_part(part_t *part, int mode)
     return(0);
 }
 
-#else
-int
-vrf_part(part_t *part, int mode)
-{
-
-   VRF_STRT(PART);
-   VRF_INT(PART, part->partkey);
-   VRF_STR(PART, part->name);
-   VRF_STR(PART, part->mfgr);
-   VRF_STR(PART, part->brand);
-   VRF_STR(PART, part->type);
-   VRF_INT(PART, part->size);
-   VRF_STR(PART, part->container);
-   VRF_MONEY(PART, part->retailprice);
-   VRF_STR(PART, part->comment);
-   VRF_END(PART);
-
-   return(0);
-}
-#endif
 
 /*
  * print the given part's suppliers
  */
-#ifdef SSB
-#else
-int
-vrf_psupp(part_t *part, int mode)
-{
-    long      i;
-
-   for (i = 0; i < SUPP_PER_PART; i++)
-      {
-      VRF_STRT(PSUPP);
-      VRF_INT(PSUPP, part->s[i].partkey);
-      VRF_INT(PSUPP, part->s[i].suppkey);
-      VRF_INT(PSUPP, part->s[i].qty);
-      VRF_MONEY(PSUPP, part->s[i].scost);
-      VRF_STR(PSUPP, part->s[i].comment);
-      VRF_END(PSUPP);
-      }
-
-   return(0);
-}
-#endif
 
 /*
  * print the given part *and* its suppliers
  */
-#ifdef SSB
-#else
-int
-vrf_part_psupp(part_t *part, int mode)
-{
-    vrf_part(part, mode);
-    vrf_psupp(part, mode);
 
-    return(0);
-}
-#endif
-
-#ifdef SSB
 int
 vrf_supp(supplier_t *supp, int mode)
 {
@@ -950,54 +555,9 @@ vrf_supp(supplier_t *supp, int mode)
     return(0);
 }
 
-#else
-int
-vrf_supp(supplier_t *supp, int mode)
-{
-   VRF_STRT(SUPP);
-   VRF_INT(SUPP, supp->suppkey);
-   VRF_STR(SUPP, supp->name);
-   VRF_STR(SUPP, supp->address);
-   VRF_INT(SUPP, supp->nation_code);
-   VRF_STR(SUPP, supp->phone);
-   VRF_MONEY(SUPP, supp->acctbal);
-   VRF_STR(SUPP, supp->comment); 
-   VRF_END(SUPP);
-
-   return(0);
-}
-#endif
-
-#ifdef SSB
-#else
-int
-vrf_nation(code_t *c, int mode)
-{
-   VRF_STRT(NATION);
-   VRF_INT(NATION, c->code);
-   VRF_STR(NATION, c->text);
-   VRF_INT(NATION, c->join);
-   VRF_STR(NATION, c->comment);
-   VRF_END(NATION);
-
-   return(0);
-}
-
-int
-vrf_region(code_t *c, int mode)
-{
-   VRF_STRT(REGION);
-   VRF_INT(REGION, c->code);
-   VRF_STR(REGION, c->text);
-   VRF_STR(REGION, c->comment);
-   VRF_END(fp);
-
-   return(0);
-}
-#endif
 
 
-#ifdef SSB
+
 int vrf_date(date_t * d, int mode)
 {
     UNUSED(mode);
@@ -1022,5 +582,4 @@ int vrf_date(date_t * d, int mode)
     return(0);
 
 }
-#endif
 
