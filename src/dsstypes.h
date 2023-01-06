@@ -22,6 +22,7 @@ typedef struct {
     char region_name[C_REGION_NAME_LEN + 1];
     char phone[PHONE_LEN + 1];
     char mktsegment[MAXAGG_LEN + 1];
+    int merchant_id;
 } customer_t;
 
 /* customers.c */
@@ -61,6 +62,7 @@ typedef struct {
     char clerk[O_CLRK_LEN + 1];
     int spriority;
     long lines;
+    int merchant_id;
     lineorder_t lineorders[O_LCNT_MAX];
 } order_t;
 
@@ -88,6 +90,7 @@ typedef struct {
     int tlen;
     long size;
     char container[P_CNTR_LEN + 1];
+    int merchant_id;
 } part_t;
 
 /* parts.c */
@@ -108,6 +111,7 @@ typedef struct {
     int region_key;
     char region_name[S_REGION_NAME_LEN + 1];
     char phone[PHONE_LEN + 1];
+    int merchant_id;
 } supplier_t;
 
 /* supplier.c */

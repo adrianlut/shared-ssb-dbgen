@@ -119,6 +119,7 @@ typedef struct {
 
 typedef struct {
     long weight;
+    long weight_single;
     char *text;
 } set_member;
 
@@ -128,6 +129,21 @@ typedef struct {
     set_member *list;
     long *permute;
 } distribution;
+
+typedef struct {
+    long size;
+    char *name;
+} distribution_part;
+
+typedef struct {
+    int merchant_count;
+    int part_count;
+    distribution_part *parts;
+    int parts_per_merchant;
+    long * sums;
+    long * cum_sums;
+    long * borders;
+} merchant_distribution;
 
 /*
  * some handy access functions 
@@ -255,6 +271,9 @@ EXTERN distribution auxillaries;
 EXTERN distribution np;
 EXTERN distribution vp;
 EXTERN distribution grammar;
+EXTERN distribution m_order;
+EXTERN distribution m_cust;
+EXTERN merchant_distribution m_cust_distribution;
 
 
 EXTERN long scale;
@@ -423,7 +442,7 @@ extern tdef tdefs[];
 #define  ENDDATE      98365
 #define  TOTDATE      2557
 #define  UPD_PCT      10
-#define  MAX_STREAM   49
+#define  MAX_STREAM   50
 
 #define  V_STR_LOW    0.4
 #define  PENNIES    100 /* for scaled int money arithmetic */
@@ -451,6 +470,11 @@ extern tdef tdefs[];
 #define HUGE_SUB(op1, op2, dst)    *dst = *op1 - op2
 #define HUGE_MOD(op1, op2)        *op1 % op2
 #define HUGE_CMP(op1, op2)        (*op1 == *op2) ? 0 : ((*op1 < *op2)-1) : 1
+
+/**
+ * DISTRIBUTED SSB DEFINES
+ */
+
 
 /******** environmental variables and defaults ***************/
 #define  DIST_TAG  "DSS_DIST"        /* environment var to override ... */
@@ -485,6 +509,7 @@ int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
 #define PR_VSTR(f, str, len)    dbg_print(DT_VSTR, f, (void *)str, len, 1)
 #define PR_VSTR_LAST(f, str, len)    dbg_print(DT_VSTR, f, (void *)str, len, 0)
 #define PR_INT(f, val)            { long tmp = val; dbg_print(DT_INT,   f, &tmp, 0, 1);  }
+#define PR_INT_LAST(f, val)       { long tmp = val; dbg_print(DT_INT,   f, &tmp, 0, 0);  }
 #define PR_HUGE(f, val)        dbg_print(DT_HUGE, f, (void *)val, 0, 1)
 #define PR_KEY(f, val)            { long tmp = val; dbg_print(DT_KEY,   f, &tmp, 0, -1); }
 #define PR_MONEY(f, val)        { long tmp = val; dbg_print(DT_MONEY, f, &tmp, 0, 1);  }
@@ -576,6 +601,7 @@ int dbg_print(int dt, FILE *tgt, void *data, int len, int eol);
 #define  BBB_OFFSET_SD 47
 #define  P_CAT_SD  48
 #define  P_CITY_SD 49
+#define O_MERCHANT_SD 50
 
 #endif            /* DSS_H */
 

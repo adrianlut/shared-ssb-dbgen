@@ -147,6 +147,23 @@ ez_sparse(long i, DSS_HUGE *ok, long seq) {
     return;
 }
 
+long key_for_merchant(int merchant_id, merchant_distribution * md) {
+    long rnd;
+    RANDOM(rnd, 1, md->sums[merchant_id], O_CKEY_SD);
+
+    long current_index = rnd;
+    int i = 0;
+    for (; i < md->parts_per_merchant; ++i) {
+        current_index -= md->borders[merchant_id * md->parts_per_merchant + i];
+        if (current_index <= 0) break;
+    }
+    if (current_index > 0) {
+        printf("Fatal error in key mapping!");
+        exit(1);
+    }
+
+    return md->cum_sums[merchant_id * md->parts_per_merchant + i] + current_index;
+}
 
 long
 mk_order(long index, order_t *o, long upd_num) {
@@ -160,7 +177,6 @@ mk_order(long index, order_t *o, long upd_num) {
     static char **asc_date = NULL;
     /* char tmp_str[2]; */
     char **mk_ascdate PROTO((void));
-    int delta = 1;
 
     if (asc_date == NULL)
         asc_date = mk_ascdate();
@@ -170,12 +186,14 @@ mk_order(long index, order_t *o, long upd_num) {
 
     mk_sparse(index, o->okey,
               (upd_num == 0) ? 0 : 1 + upd_num / (10000 / refresh));
-    RANDOM(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD);
-    while (o->custkey % CUST_MORTALITY == 0) {
-        o->custkey += delta;
-        o->custkey = MIN(o->custkey, O_CKEY_MAX);
-        delta *= -1;
-    }
+
+    char merchant_id_str[3];
+    pick_str(&m_order, O_MERCHANT_SD, merchant_id_str);
+    o->merchant_id = atoi(merchant_id_str);
+
+    o->custkey = key_for_merchant(o->merchant_id, &m_cust_distribution);
+    //RANDOM(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD);
+
     pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
     RANDOM(clk_num, 1, MAX((scale * O_CLRK_SCL), O_CLRK_SCL), O_CLRK_SD);
     o->spriority = 0;

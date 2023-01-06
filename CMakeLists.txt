@@ -114,7 +114,7 @@ add_executable(dbgen
 	src/text.c
 )
 
-configure_file(dists.dss dists.dss COPYONLY)
+configure_file(dists.dss dists.dss)
 
 add_executable(qgen
 	src/bcd2.c

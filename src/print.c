@@ -201,7 +201,9 @@ pr_line(order_t *o, int mode) {
         PR_INT(fp_l, o->lineorders[i].supp_cost);
         PR_INT(fp_l, o->lineorders[i].tax);
         PR_STR(fp_l, o->lineorders[i].commit_date, DATE_LEN);
-        PR_VSTR_LAST(fp_l, o->lineorders[i].shipmode, O_SHIP_MODE_LEN);
+        PR_VSTR(fp_l, o->lineorders[i].shipmode, O_SHIP_MODE_LEN);
+        PR_INT_LAST(fp_l, o->merchant_id);
+
         PR_END(fp_l);
     }
 

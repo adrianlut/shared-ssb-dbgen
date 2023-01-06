@@ -354,6 +354,7 @@ long      weight,
         strcpy(target->list[count].text, token);
         target->max += weight;
         target->list[count].weight = target->max;
+        target->list[count].weight_single = weight;
 
         count += 1;
         } /* while fgets() */

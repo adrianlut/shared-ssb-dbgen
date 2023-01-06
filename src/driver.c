@@ -81,6 +81,7 @@ int     getopt(int arg_cnt, char **arg_vect, char *options);
 #include "dsstypes.h"
 #include "bcd2.h"
 #include "life_noise.h"
+#include "util.h"
 
 /*
 * Function prototypes
@@ -295,6 +296,63 @@ set_files(int i, int pload) {
     return (0);
 }
 
+void split_dimension(merchant_distribution *target, long total_count, distribution * source_distribution) {
+    int merchant_count = m_order.count;
+    target->merchant_count = merchant_count;
+    int merchant_parts = (1 << merchant_count) - 1;
+    target->part_count = merchant_parts;
+    int parts_per_merchant = 1 << (merchant_count - 1);
+    target->parts_per_merchant = parts_per_merchant;
+
+    target->parts = (distribution_part *) malloc(sizeof(distribution_part) * merchant_parts);
+    MALLOC_CHECK(target->parts);
+
+    target->borders = (long *) malloc(sizeof(long) * merchant_count * parts_per_merchant);
+    MALLOC_CHECK(target->borders);
+
+    target->cum_sums = (long *) malloc(sizeof(long) * merchant_count * parts_per_merchant);
+    MALLOC_CHECK(target->cum_sums);
+
+    for (int i = 0; i < merchant_count * parts_per_merchant; ++i) {
+        target->cum_sums[i] = 0;
+    }
+
+    target->sums = (long *) malloc(sizeof(long) * merchant_count);
+    MALLOC_CHECK(target->sums)
+
+    int * merchant_counter = (int *) malloc(sizeof(int) * merchant_count);
+    MALLOC_CHECK(merchant_counter)
+
+    for (int i = 0; i < merchant_count; ++i) {
+        target->sums[i] = 0;
+        merchant_counter[i] = 0;
+    }
+
+    long cumsum = 0;
+
+    for (int part_index = 0; part_index < merchant_parts; ++part_index) {
+        if ((total_count * source_distribution->list[part_index].weight_single) % source_distribution->max != 0) {
+            printf("cannot divide customers evenly between merchants!");
+            exit(1);
+        }
+        target->parts[part_index].size = total_count * source_distribution->list[part_index].weight_single / source_distribution->max;
+
+        target->parts[part_index].name = source_distribution->list[part_index].text;
+        unsigned long name_len = strlen(target->parts[part_index].name);
+        long per_merchant_size = target->parts[part_index].size / name_len;
+        for (int merchant_index = 0; merchant_index < merchant_count; ++merchant_index) {
+            if (strstr(target->parts[part_index].name, m_order.list[merchant_index].text) != NULL) {
+                target->borders[merchant_index * parts_per_merchant + merchant_counter[merchant_index]] = per_merchant_size;
+                target->sums[merchant_index] += per_merchant_size;
+                cumsum += per_merchant_size;
+                target->cum_sums[merchant_index * parts_per_merchant + merchant_counter[merchant_index]] = cumsum;
+                ++(merchant_counter[merchant_index]);
+            }
+        }
+
+    }
+}
+
 
 /*
 * read the distributions needed in the benchamrk
@@ -328,7 +386,10 @@ load_dists(void) {
     read_dist(env_config(DIST_TAG, DIST_DFLT), "grammar", &grammar);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "np", &np);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "vp", &vp);
+    read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_order", &m_order);
+    read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_customer", &m_cust);
 
+    split_dimension(&m_cust_distribution, O_CKEY_MAX, &m_cust);
 }
 
 /*

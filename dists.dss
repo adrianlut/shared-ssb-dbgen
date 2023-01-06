@@ -41,6 +41,25 @@
 #  np
 #  vp
 ###
+# merchants
+###
+BEGIN merchant_order
+COUNT|3
+0|5
+1|4
+2|1
+END merchant_order
+BEGIN merchant_customer
+COUNT|7
+0|40
+1|20
+2|10
+01|10
+02|5
+12|5
+012|10
+END merchant_customer
+###
 # category
 ###
 BEGIN category
