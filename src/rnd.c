@@ -6,8 +6,8 @@
  * (Reference:  CACM, Oct 1988, pp 1192-1201)
  * 
  * NextRand:  Computes next random integer
- * UnifInt:   Yields an long uniformly distributed between given bounds 
- * UnifReal: ields a real uniformly distributed between given bounds   
+ * UnifInt:   Yields a long uniformly distributed between given bounds
+ * UnifReal: ields a real uniformly distributed between given bounds
  * Exponential: Yields a real exponentially distributed with given mean
  * 
  */
@@ -16,12 +16,14 @@
 #include <stdio.h>
 #include <math.h>
 #include "dss.h"
-#include "rnd.h" 
+#include "rnd.h"
 #include <assert.h>
 
 /* Note: This file may not currently be using anything from <inttypes.h> or <stdint.h> */
 #if defined(HAVE_INTTYPES_H)
+
 #include <inttypes.h>
+
 #elif defined(HAVE_STDINT_H)
 #include <stdint.h>
 #elif defined(HAVE_SYS_BITTYPES_H)
@@ -29,89 +31,87 @@
 #endif /* HAVE_INTTYPES_H */
 
 char *env_config PROTO((char *tag, char *dflt));
+
 void NthElement(long, long *);
 
+/**
+ * Writes a uniformly distributed long between lower and upper into tgt. Uses stream for random number generation
+ * @param tgt
+ * @param lower
+ * @param upper
+ * @param stream
+ */
 void
-dss_random(long *tgt, long lower, long upper, long stream)
-{
-	assert(stream >= 0 && stream <= MAX_STREAM);
-	*tgt = UnifInt((long)lower, (long)upper, (long)stream);
-	Seed[stream].usage += 1;
+dss_random(long *tgt, long lower, long upper, long stream) {
+    assert(stream >= 0 && stream <= MAX_STREAM);
+    *tgt = UnifInt((long) lower, (long) upper, (long) stream);
+    Seed[stream].usage += 1;
+}
 
-	return;
+/**
+ * Resets the usage field of all Seed structs to 0
+ * @param t
+ */
+void
+row_start(int t) {
+    int i;
+    UNUSED(t);
+    for (i = 0; i <= MAX_STREAM; i++) Seed[i].usage = 0;
+}
+
+/**
+ * Called after each row created in each table
+ * @param t
+ */
+void
+row_stop(int t) {
+    int i;
+
+    /* need to allow for handling the master and detail together */
+    if (t == ORDER_LINE)
+        t = ORDER;
+    if (t == PART_PSUPP)
+        t = PART;
+
+    for (i = 0; i <= MAX_STREAM; i++) {
+        if ((Seed[i].table == t) || (Seed[i].table == tdefs[t].child)) {
+            if (set_seeds && (Seed[i].usage > Seed[i].boundary)) {
+                fprintf(stderr, "\nSEED CHANGE: seed[%d].usage = %ld\n", i, Seed[i].usage);
+                Seed[i].boundary = Seed[i].usage;
+            } else {
+                NthElement((Seed[i].boundary - Seed[i].usage), &Seed[i].value);
+            }
+        }
+    }
+}
+
+void backup_random_state(const long *stream_ids, int cnt) {
+    for (int i = 0; i < cnt; ++i) {
+        seed_backups[stream_ids[i]] = Seed[stream_ids[i]];
+    }
+}
+
+void restore_random_state(const long *stream_ids, int cnt) {
+    for (int i = 0; i < cnt; ++i) {
+        Seed[stream_ids[i]] = seed_backups[stream_ids[i]];
+    }
 }
 
 void
-row_start(int t)	\
-{
-	int i;
-	UNUSED(t);
-	for (i=0; i <= MAX_STREAM; i++) 
-		Seed[i].usage = 0 ; 
-	
-	return;
+dump_seeds(int tbl) {
+    int i;
+
+    for (i = 0; i <= MAX_STREAM; i++)
+        if (Seed[i].table == tbl)
+            printf("%d:\t%ld\n", i, Seed[i].value);
 }
 
-void
-row_stop(int t)	\
-	{ 
-	int i;
-	
-	/* need to allow for handling the master and detail together */
-	if (t == ORDER_LINE)
-		t = ORDER;
-	if (t == PART_PSUPP)
-		t = PART;
-	
-	for (i=0; i <= MAX_STREAM; i++)
-		{
-		if ((Seed[i].table == t) || (Seed[i].table == tdefs[t].child))
-			{ 
-			if (set_seeds && (Seed[i].usage > Seed[i].boundary))
-				{
-				fprintf(stderr, "\nSEED CHANGE: seed[%d].usage = %ld\n",
-					i, Seed[i].usage); 
-				Seed[i].boundary = Seed[i].usage;
-				} 
-			else 
-				{
-				NthElement((Seed[i].boundary - Seed[i].usage), &Seed[i].value);
-				}
-			} 
-		}
-	return;
-	}
-
-void
-dump_seeds(int tbl)
-{
-	int i;
-
-	for (i=0; i <= MAX_STREAM; i++)
-		if (Seed[i].table == tbl)
-			printf("%d:\t%ld\n", i, Seed[i].value);
-	return;
-}
-
-/******************************************************************
-
-   NextRand:  Computes next random integer
-
-*******************************************************************/
-
-/*
- * long NextRand( long nSeed )
+/**
+ * Computes next random integer. nSeed is the previous random number; the returned value is the
+ * next random number. The routine generates all numbers in the range 1 .. nM-1.
  */
 long
-NextRand(long nSeed)
-
-/*
- * nSeed is the previous random number; the returned value is the 
- * next random number. The routine generates all numbers in the 
- * range 1 .. nM-1.
- */
-
-{
+NextRand(long nSeed) {
 
     /*
      * The routine returns (nSeed * nA) mod nM, where   nA (the 
@@ -155,7 +155,7 @@ NextRand(long nSeed)
      * 0 and nM-1, so that's the answer.
      */
 
-    long            nU, nV;
+    long nU, nV;
 
     nU = nSeed / nQ;
     nV = nSeed - nQ * nU;       /* i.e., nV = nSeed % nQ */
@@ -165,33 +165,21 @@ NextRand(long nSeed)
     return (nSeed);
 }
 
-/******************************************************************
-
-   UnifInt:  Yields an long uniformly distributed between given bounds
-
-*******************************************************************/
-
-/*
- * long UnifInt( long nLow, long nHigh, long nStream )
- */
-long
-UnifInt(long nLow, long nHigh, long nStream)
-
-/*
- * Returns an integer uniformly distributed between nLow and nHigh, 
- * including * the endpoints.  nStream is the random number stream.   
+/**
+ * Yields an long uniformly distributed between given bounds.
+ * Returns an integer uniformly distributed between nLow and
+ * nHigh, including the endpoints. nStream is the random number stream.
  * Stream 0 is used if nStream is not in the range 0..MAX_STREAM.
  */
-
-{
-    double          dRange;
-    long            nTemp;
+long
+UnifInt(long nLow, long nHigh, long nStream) {
+    double dRange;
+    long nTemp;
 
     if (nStream < 0 || nStream > MAX_STREAM)
         nStream = 0;
 
-    if (nLow > nHigh)
-    {
+    if (nLow > nHigh) {
         nTemp = nLow;
         nLow = nHigh;
         nHigh = nTemp;
@@ -203,35 +191,21 @@ UnifInt(long nLow, long nHigh, long nStream)
     return (nLow + nTemp);
 }
 
-
-
-/******************************************************************
-
-   UnifReal:  Yields a real uniformly distributed between given bounds
-
-*******************************************************************/
-
-/*
- * double UnifReal( double dLow, double dHigh, long nStream )
- */
-double
-UnifReal(double dLow, double dHigh, long nStream)
-
-/*
- * Returns a double uniformly distributed between dLow and dHigh,   
- * excluding the endpoints.  nStream is the random number stream.   
+/**
+ * Yields a real uniformly distributed between given bounds.
+ * Returns a double uniformly distributed between dLow and dHigh,
+ * excluding the endpoints. nStream is the random number stream.
  * Stream 0 is used if nStream is not in the range 0..MAX_STREAM.
  */
-
-{
-    double          dTemp;
+double
+UnifReal(double dLow, double dHigh, long nStream) {
+    double dTemp;
 
     if (nStream < 0 || nStream > MAX_STREAM)
         nStream = 0;
     if (dLow == dHigh)
         return (dLow);
-    if (dLow > dHigh)
-    {
+    if (dLow > dHigh) {
         dTemp = dLow;
         dLow = dHigh;
         dHigh = dTemp;
@@ -241,29 +215,16 @@ UnifReal(double dLow, double dHigh, long nStream)
     return (dLow + dTemp);
 }
 
-
-
-/******************************************************************%
-
-   Exponential:  Yields a real exponentially distributed with given mean
-
-*******************************************************************/
-
-/*
- * double Exponential( double dMean, long nStream )
- */
-double
-Exponential(double dMean, long nStream)
-
-/*
- * Returns a double uniformly distributed with mean dMean.  
- * 0.0 is returned iff dMean <= 0.0. nStream is the random number 
- * stream. Stream 0 is used if nStream is not in the range 
+/**
+ * Exponential:  Yields a real exponentially distributed with given mean.
+ * Returns a double uniformly distributed with mean dMean.
+ * 0.0 is returned iff dMean <= 0.0. nStream is the random number
+ * stream. Stream 0 is used if nStream is not in the range
  * 0..MAX_STREAM.
  */
-
-{
-    double          dTemp;
+double
+Exponential(double dMean, long nStream) {
+    double dTemp;
 
     if (nStream < 0 || nStream > MAX_STREAM)
         nStream = 0;

@@ -334,17 +334,18 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
             exit(1);
         }
 
-        target->parts[part_index].start = cumsum;
+        target->parts[part_index].start = cumsum + 1;
         target->parts[part_index].size = total_count * source_distribution->list[part_index].weight_single / source_distribution->max;
         target->parts[part_index].name = source_distribution->list[part_index].text;
 
         long name_len = strlen(target->parts[part_index].name);
         target->parts[part_index].sub_part_count = name_len;
         long per_merchant_size = target->parts[part_index].size / name_len;
+        target->parts[part_index].sub_part_size = per_merchant_size;
         for (int merchant_index = 0; merchant_index < merchant_count; ++merchant_index) {
             if (strstr(target->parts[part_index].name, m_order.list[merchant_index].text) != NULL) {
                 cumsum += per_merchant_size;
-                target->part_owners[part_owner_index].index = cumsum;
+                target->part_owners[part_owner_index].last_index = cumsum;
                 target->part_owners[part_owner_index].owner = merchant_index;
                 target->merchant_infos[merchant_index].block_sizes[merchant_counter[merchant_index]] = per_merchant_size;
                 target->merchant_infos[merchant_index].end_indexes[merchant_counter[merchant_index]] = cumsum;
@@ -353,7 +354,6 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
                 ++(merchant_counter[merchant_index]);
             }
         }
-
     }
 }
 

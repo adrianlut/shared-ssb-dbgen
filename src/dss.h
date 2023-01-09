@@ -131,7 +131,7 @@ typedef struct {
 } distribution;
 
 typedef struct {
-    long index;
+    long last_index;
     int owner;
 } sub_part_owner;
 
@@ -139,6 +139,7 @@ typedef struct {
     long start;
     long size;
     long sub_part_count;
+    long sub_part_size;
     char *name;
 } distribution_part;
 
@@ -242,6 +243,10 @@ void dss_random(long *tgt, long min, long max, long seed);
 void row_start(int t);
 
 void row_stop(int t);
+
+void backup_random_state(const long *stream_ids, int cnt);
+
+void restore_random_state(const long *stream_ids, int cnt);
 
 void dump_seeds(int t);
 

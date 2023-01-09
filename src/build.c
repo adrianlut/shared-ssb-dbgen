@@ -105,7 +105,7 @@ gen_category(char *target, long seed){
 
 int lookup_merchant(merchant_distribution * md, long id) {
     for (int i = 0; i < md->merchant_count * md->parts_per_merchant; ++i) {
-        if (id - md->part_owners[i].index <= 0) {
+        if (id - md->part_owners[i].last_index <= 0) {
             return md->part_owners[i].owner;
         }
     }
@@ -114,11 +114,76 @@ int lookup_merchant(merchant_distribution * md, long id) {
     return 0;
 }
 
+/**
+ * Determines whether the id is the start of a new part with multiple sub-parts according to the given distribution.
+ * @param md
+ * @param id
+ * @return
+ */
+int is_backup_id(merchant_distribution *md, long id, int *next_part_i, int *backup_existing) {
+    if (md->parts[*next_part_i].start == id) {
+        *backup_existing = (md->parts[*next_part_i].sub_part_count > 1);
+        *next_part_i += 1;
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+/**
+ * Determines whether the id is the start of a new sub-part according to the given distribution.
+ * @param md
+ * @param id
+ * @return
+ */
+int is_restore_id(merchant_distribution *md, long id, int part_i, int sub_part_i) {
+    distribution_part *part = md->parts + part_i;
+    if (id == (part->start + (sub_part_i) * part->sub_part_size)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+
+/**
+ * Random streams that capture the state of the customer generator:
+ * C_ADDR_SD (address)
+ * C_NTRG_SD (nation, region)
+ * C_PHNE_SD (phone)
+ * C_MSEG_SD (mktsegment)
+ * P_CITY_SD (city)
+ *
+ * Customer name also has to be reset
+ */
+
 long mk_cust(long n_cust, customer_t *c) {
-    long i;
+
+    static int next_part_i = 0;
+    static int backup_existing = 0;
+    static int next_subpart_i = 1;
+    static long n_cust_offset = 0;
+
+    static long random_streams[5] = {C_ADDR_SD, C_NTRG_SD, C_PHNE_SD, C_MSEG_SD, P_CITY_SD};
+
+    if (is_backup_id(&m_cust_distribution, n_cust, &next_part_i, &backup_existing)) {
+        backup_random_state(random_streams, 5);
+    } else if (backup_existing && is_restore_id(&m_cust_distribution, n_cust, next_part_i - 1, next_subpart_i)) {
+        restore_random_state(random_streams, 5);
+        n_cust_offset = m_cust_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
+        if (next_subpart_i == m_cust_distribution.parts[next_part_i - 1].sub_part_count) {
+            next_subpart_i = 1;
+            backup_existing = 0;
+        } else {
+            ++next_subpart_i;
+        }
+    }
+
     c->custkey = n_cust;
-    sprintf(c->name, C_NAME_FMT, C_NAME_TAG, n_cust);
+    sprintf(c->name, C_NAME_FMT, C_NAME_TAG, n_cust - n_cust_offset);
     c->alen = V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
+    long i;
     RANDOM(i, 0, nations.count - 1, C_NTRG_SD);
     strcpy(c->nation_name, nations.list[i].text);
     strcpy(c->region_name, regions.list[nations.list[i].weight].text);
