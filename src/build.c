@@ -109,6 +109,9 @@ int lookup_merchant(merchant_distribution * md, long id) {
             return md->part_owners[i].owner;
         }
     }
+
+    // This should not happen!
+    return 0;
 }
 
 long mk_cust(long n_cust, customer_t *c) {
@@ -158,12 +161,12 @@ ez_sparse(long i, DSS_HUGE *ok, long seq) {
 
 long key_for_merchant(int merchant_id, merchant_distribution * md) {
     long rnd;
-    RANDOM(rnd, 1, md->sums[merchant_id], O_CKEY_SD);
+    RANDOM(rnd, 1, md->merchant_infos[merchant_id].total_count, O_CKEY_SD);
 
     long current_index = rnd;
     int i = 0;
     for (; i < md->parts_per_merchant; ++i) {
-        current_index -= md->borders[merchant_id * md->parts_per_merchant + i];
+        current_index -= md->merchant_infos[merchant_id].block_sizes[i];
         if (current_index <= 0) break;
     }
     if (current_index > 0) {
@@ -171,7 +174,7 @@ long key_for_merchant(int merchant_id, merchant_distribution * md) {
         exit(1);
     }
 
-    return md->cum_sums[merchant_id * md->parts_per_merchant + i] + current_index;
+    return md->merchant_infos[merchant_id].end_indexes[i] + current_index;
 }
 
 long

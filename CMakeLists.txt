@@ -168,10 +168,10 @@ set_property(TARGET dbgen qgen PROPERTY C_EXTENSIONS OFF)
 # Note: Defining _POSIX_C_SOURCE=200809L allows the code access to functions defined in the POSIX standard,
 # but not in the C language standard - and such functions _are_ in use in the code.
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Wno-missing-field-initializers)
+    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
     set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Wno-missing-field-initializers)
+    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
     set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
     set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS "/W3")

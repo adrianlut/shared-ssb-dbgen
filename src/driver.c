@@ -298,62 +298,57 @@ set_files(int i, int pload) {
 
 void split_dimension(merchant_distribution *target, long total_count, distribution * source_distribution) {
     int merchant_count = m_order.count;
-    target->merchant_count = merchant_count;
-    int merchant_parts = (1 << merchant_count) - 1;
-    target->part_count = merchant_parts;
+    int part_count = (1 << merchant_count) - 1;
     int parts_per_merchant = 1 << (merchant_count - 1);
+
+    target->merchant_count = merchant_count;
+    target->part_count = part_count;
     target->parts_per_merchant = parts_per_merchant;
 
-    target->parts = (distribution_part *) malloc(sizeof(distribution_part) * merchant_parts);
-    MALLOC_CHECK(target->parts);
+    target->parts = (distribution_part *) malloc(sizeof(distribution_part) * part_count);
+    target->merchant_infos = (merchant_info *) malloc(sizeof(merchant_info) * merchant_count);
+    target->part_owners = (sub_part_owner *) malloc(sizeof(sub_part_owner) * merchant_count * parts_per_merchant);
 
-    target->borders = (long *) malloc(sizeof(long) * merchant_count * parts_per_merchant);
-    MALLOC_CHECK(target->borders);
+    for (int merchant_i = 0; merchant_i < merchant_count; ++merchant_i) {
+        target->merchant_infos[merchant_i].parts = parts_per_merchant;
+        target->merchant_infos[merchant_i].total_count = 0;
+        target->merchant_infos[merchant_i].block_sizes = (long *) malloc(sizeof(long) * parts_per_merchant);
+        target->merchant_infos[merchant_i].end_indexes = (long *) malloc(sizeof(long) * parts_per_merchant);
 
-    target->cum_sums = (long *) malloc(sizeof(long) * merchant_count * parts_per_merchant);
-    MALLOC_CHECK(target->cum_sums);
-
-    for (int i = 0; i < merchant_count * parts_per_merchant; ++i) {
-        target->cum_sums[i] = 0;
+        for (int i = 0; i < parts_per_merchant; ++i) {
+            target->merchant_infos[merchant_i].block_sizes[i] = 0;
+            target->merchant_infos[merchant_i].end_indexes[i] = 0;
+        }
     }
-
-    target->sums = (long *) malloc(sizeof(long) * merchant_count);
-    MALLOC_CHECK(target->sums)
-
-    target->part_owners = (part_owner *) malloc(sizeof(part_owner) * merchant_count * parts_per_merchant);
-    MALLOC_CHECK(target->part_owners);
 
     int part_owner_index = 0;
-
     int * merchant_counter = (int *) malloc(sizeof(int) * merchant_count);
-    MALLOC_CHECK(merchant_counter)
-
     for (int i = 0; i < merchant_count; ++i) {
-        target->sums[i] = 0;
         merchant_counter[i] = 0;
     }
-
     long cumsum = 0;
 
-    for (int part_index = 0; part_index < merchant_parts; ++part_index) {
+    for (int part_index = 0; part_index < part_count; ++part_index) {
         if ((total_count * source_distribution->list[part_index].weight_single) % source_distribution->max != 0) {
             printf("cannot divide customers evenly between merchants!");
             exit(1);
         }
 
+        target->parts[part_index].start = cumsum;
         target->parts[part_index].size = total_count * source_distribution->list[part_index].weight_single / source_distribution->max;
         target->parts[part_index].name = source_distribution->list[part_index].text;
 
-        unsigned long name_len = strlen(target->parts[part_index].name);
+        long name_len = strlen(target->parts[part_index].name);
+        target->parts[part_index].sub_part_count = name_len;
         long per_merchant_size = target->parts[part_index].size / name_len;
         for (int merchant_index = 0; merchant_index < merchant_count; ++merchant_index) {
             if (strstr(target->parts[part_index].name, m_order.list[merchant_index].text) != NULL) {
-                target->borders[merchant_index * parts_per_merchant + merchant_counter[merchant_index]] = per_merchant_size;
-                target->sums[merchant_index] += per_merchant_size;
                 cumsum += per_merchant_size;
-                target->cum_sums[merchant_index * parts_per_merchant + merchant_counter[merchant_index]] = cumsum;
                 target->part_owners[part_owner_index].index = cumsum;
                 target->part_owners[part_owner_index].owner = merchant_index;
+                target->merchant_infos[merchant_index].block_sizes[merchant_counter[merchant_index]] = per_merchant_size;
+                target->merchant_infos[merchant_index].end_indexes[merchant_counter[merchant_index]] = cumsum;
+                target->merchant_infos[merchant_index].total_count += per_merchant_size;
                 ++part_owner_index;
                 ++(merchant_counter[merchant_index]);
             }

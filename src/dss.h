@@ -133,22 +133,29 @@ typedef struct {
 typedef struct {
     long index;
     int owner;
-} part_owner;
+} sub_part_owner;
 
 typedef struct {
+    long start;
     long size;
+    long sub_part_count;
     char *name;
 } distribution_part;
 
 typedef struct {
+    long total_count;
+    long * block_sizes;
+    long * end_indexes;
+    int parts;
+} merchant_info;
+
+typedef struct {
     int merchant_count;
     int part_count;
-    distribution_part *parts;
     int parts_per_merchant;
-    long * sums;
-    long * cum_sums;
-    long * borders;
-    part_owner *part_owners;
+    merchant_info *merchant_infos;
+    distribution_part *parts;
+    sub_part_owner *part_owners;
 } merchant_distribution;
 
 /*
