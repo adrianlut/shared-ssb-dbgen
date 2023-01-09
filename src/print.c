@@ -239,7 +239,8 @@ pr_part(part_t *part, int mode) {
     PR_VSTR(p_fp, part->type,
             (columnar) ? (long) P_TYPE_LEN : part->tlen);
     PR_INT(p_fp, part->size);
-    PR_VSTR_LAST(p_fp, part->container, P_CNTR_LEN);
+    PR_VSTR(p_fp, part->container, P_CNTR_LEN);
+    PR_INT_LAST(p_fp, part->merchant_id);
     PR_END(p_fp);
     return (0);
 }
@@ -272,7 +273,8 @@ pr_supp(supplier_t *supp, int mode) {
     PR_STR(fp, supp->city, CITY_FIX);
     PR_STR(fp, supp->nation_name, C_NATION_NAME_LEN);
     PR_STR(fp, supp->region_name, C_REGION_NAME_LEN);
-    PR_VSTR_LAST(fp, supp->phone, PHONE_LEN);
+    PR_VSTR(fp, supp->phone, PHONE_LEN);
+    PR_INT_LAST(fp, supp->merchant_id);
     PR_END(fp);
 
     return (0);

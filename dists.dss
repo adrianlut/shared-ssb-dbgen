@@ -59,6 +59,26 @@ COUNT|7
 12|5
 012|10
 END merchant_customer
+BEGIN merchant_supplier
+COUNT|7
+0|10
+1|10
+2|10
+01|10
+02|5
+12|5
+012|50
+END merchant_supplier
+BEGIN merchant_part
+COUNT|7
+0|10
+1|10
+2|20
+01|10
+02|10
+12|10
+012|30
+END merchant_part
 ###
 # category
 ###

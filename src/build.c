@@ -219,14 +219,11 @@ ez_sparse(long i, DSS_HUGE *ok, long seq) {
     *ok += seq;
     *ok = *ok << SPARSE_KEEP;
     *ok += low_bits;
-
-
-    return;
 }
 
-long key_for_merchant(int merchant_id, merchant_distribution * md) {
+long key_for_merchant(int merchant_id, merchant_distribution * md, long random_stream_id) {
     long rnd;
-    RANDOM(rnd, 1, md->merchant_infos[merchant_id].total_count, O_CKEY_SD);
+    RANDOM(rnd, 1, md->merchant_infos[merchant_id].total_count, random_stream_id);
 
     long current_index = rnd;
     int i = 0;
@@ -268,7 +265,7 @@ mk_order(long index, order_t *o, long upd_num) {
     pick_str(&m_order, O_MERCHANT_SD, merchant_id_str);
     o->merchant_id = atoi(merchant_id_str);
 
-    o->custkey = key_for_merchant(o->merchant_id, &m_cust_distribution);
+    o->custkey = key_for_merchant(o->merchant_id, &m_cust_distribution, O_CKEY_SD);
     //RANDOM(o->custkey, O_CKEY_MIN, O_CKEY_MAX, O_CKEY_SD);
 
     pick_str(&o_priority_set, O_PRIO_SD, o->opriority);
@@ -284,8 +281,12 @@ mk_order(long index, order_t *o, long upd_num) {
         HUGE_SET(o->okey, o->lineorders[lcnt].okey);
         o->lineorders[lcnt].linenumber = lcnt + 1;
         o->lineorders[lcnt].custkey = o->custkey;
-        RANDOM(o->lineorders[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
-        RANDOM(o->lineorders[lcnt].suppkey, L_SKEY_MIN, L_SKEY_MAX, L_SKEY_SD);
+
+        // TODO: replace the supplier and part generation
+        o->lineorders[lcnt].partkey = key_for_merchant(o->merchant_id, &m_part_distribution, L_PKEY_SD);
+        o->lineorders[lcnt].suppkey = key_for_merchant(o->merchant_id, &m_supp_distribution, L_SKEY_SD);
+//        RANDOM(o->lineorders[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
+//        RANDOM(o->lineorders[lcnt].suppkey, L_SKEY_MIN, L_SKEY_MAX, L_SKEY_SD);
 
         RANDOM(o->lineorders[lcnt].quantity, L_QTY_MIN, L_QTY_MAX, L_QTY_SD);
         RANDOM(o->lineorders[lcnt].discount, L_DCNT_MIN, L_DCNT_MAX, L_DCNT_SD);
@@ -349,7 +350,7 @@ long mk_part(long index, part_t *p) {
     RANDOM(p->size, P_SIZE_MIN, P_SIZE_MAX, P_SIZE_SD);
 
     pick_str(&p_cntr_set, P_CNTR_SD, p->container);
-
+    p->merchant_id = lookup_merchant(&m_part_distribution, index);
 
     return (0);
 }
@@ -370,6 +371,7 @@ mk_supp(long index, supplier_t *s) {
     strcpy(s->region_name, regions.list[nations.list[i].weight].text);
     gen_city(s->city, s->nation_name);
     gen_phone(i, s->phone, (long) C_PHNE_SD);
+    s->merchant_id = lookup_merchant(&m_supp_distribution, index);
     return (0);
 }
 

@@ -96,7 +96,7 @@ void kill_load(void);
 
 int pload(int tbl);
 
-void gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num);
+void gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num_f);
 
 int pr_drange(int tbl, DSS_HUGE min, DSS_HUGE cnt, long num);
 
@@ -392,15 +392,19 @@ load_dists(void) {
     read_dist(env_config(DIST_TAG, DIST_DFLT), "vp", &vp);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_order", &m_order);
     read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_customer", &m_cust);
+    read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_supplier", &m_supp);
+    read_dist(env_config(DIST_TAG, DIST_DFLT), "merchant_part", &m_part);
 
     split_dimension(&m_cust_distribution, O_CKEY_MAX, &m_cust);
+    split_dimension(&m_supp_distribution, L_SKEY_MAX, &m_supp);
+    split_dimension(&m_part_distribution, L_PKEY_MAX, &m_part);
 }
 
 /*
 * generate a particular table
 */
 void
-gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
+gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num_f) {
     static order_t o;
     supplier_t supp;
     customer_t cust;
@@ -431,18 +435,18 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
 
         switch (tnum) {
             case LINE:
-                mk_order(i, &o, upd_num % 10000);
+                mk_order(i, &o, upd_num_f % 10000);
 
-                if (insert_segments && (upd_num > 0)) {
-                    if ((upd_num / 10000) < residual_rows) {
+                if (insert_segments && (upd_num_f > 0)) {
+                    if ((upd_num_f / 10000) < residual_rows) {
                         if ((++rows_this_segment) > rows_per_segment) {
                             rows_this_segment = 0;
-                            upd_num += 10000;
+                            upd_num_f += 10000;
                         }
                     } else {
                         if ((++rows_this_segment) >= rows_per_segment) {
                             rows_this_segment = 0;
-                            upd_num += 10000;
+                            upd_num_f += 10000;
                         }
                     }
                 }
@@ -451,7 +455,7 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
                     if (validate)
                         tdefs[tnum].verify(&o, 0);
                     else
-                        tdefs[tnum].loader[direct](&o, upd_num);
+                        tdefs[tnum].loader[direct](&o, upd_num_f);
                 }
                 break;
             case SUPP:
@@ -460,7 +464,7 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
                     if (validate)
                         tdefs[tnum].verify(&supp, 0);
                     else
-                        tdefs[tnum].loader[direct](&supp, upd_num);
+                        tdefs[tnum].loader[direct](&supp, upd_num_f);
                 }
                 break;
             case CUST:
@@ -469,7 +473,7 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
                     if (validate)
                         tdefs[tnum].verify(&cust, 0);
                     else
-                        tdefs[tnum].loader[direct](&cust, upd_num);
+                        tdefs[tnum].loader[direct](&cust, upd_num_f);
                 }
                 break;
             case PART:
@@ -478,7 +482,7 @@ gen_tbl(int tnum, DSS_HUGE start, DSS_HUGE count, long upd_num) {
                     if (validate)
                         tdefs[tnum].verify(&part, 0);
                     else
-                        tdefs[tnum].loader[direct](&part, upd_num);
+                        tdefs[tnum].loader[direct](&part, upd_num_f);
                 }
                 break;
             case DATE:

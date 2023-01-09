@@ -291,7 +291,11 @@ EXTERN distribution vp;
 EXTERN distribution grammar;
 EXTERN distribution m_order;
 EXTERN distribution m_cust;
+EXTERN distribution m_supp;
+EXTERN distribution m_part;
 EXTERN merchant_distribution m_cust_distribution;
+EXTERN merchant_distribution m_supp_distribution;
+EXTERN merchant_distribution m_part_distribution;
 
 
 EXTERN long scale;
