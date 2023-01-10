@@ -169,6 +169,7 @@ long mk_cust(long n_cust, customer_t *c) {
 
     if (is_backup_id(&m_cust_distribution, n_cust, &next_part_i, &backup_existing)) {
         backup_random_state(random_streams, 5);
+        n_cust_offset = 0;
     } else if (backup_existing && is_restore_id(&m_cust_distribution, n_cust, next_part_i - 1, next_subpart_i)) {
         restore_random_state(random_streams, 5);
         n_cust_offset = m_cust_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
@@ -282,7 +283,6 @@ mk_order(long index, order_t *o, long upd_num) {
         o->lineorders[lcnt].linenumber = lcnt + 1;
         o->lineorders[lcnt].custkey = o->custkey;
 
-        // TODO: replace the supplier and part generation
         o->lineorders[lcnt].partkey = key_for_merchant(o->merchant_id, &m_part_distribution, L_PKEY_SD);
         o->lineorders[lcnt].suppkey = key_for_merchant(o->merchant_id, &m_supp_distribution, L_SKEY_SD);
 //        RANDOM(o->lineorders[lcnt].partkey, L_PKEY_MIN, L_PKEY_MAX, L_PKEY_SD);
@@ -327,6 +327,24 @@ mk_order(long index, order_t *o, long upd_num) {
 long mk_part(long index, part_t *p) {
     long mfgr, cat, brnd;
 
+    static int next_part_i = 0;
+    static int backup_existing = 0;
+    static int next_subpart_i = 1;
+
+    static long random_streams[7] = {P_NAME_SD, P_MFG_SD, P_CAT_SD, P_BRND_SD, P_TYPE_SD, P_SIZE_SD, P_CNTR_SD};
+
+    if (is_backup_id(&m_part_distribution, index, &next_part_i, &backup_existing)) {
+        backup_random_state(random_streams, 7);
+    } else if (backup_existing && is_restore_id(&m_part_distribution, index, next_part_i - 1, next_subpart_i)) {
+        restore_random_state(random_streams, 7);
+        if (next_subpart_i == m_part_distribution.parts[next_part_i - 1].sub_part_count) {
+            next_subpart_i = 1;
+            backup_existing = 0;
+        } else {
+            ++next_subpart_i;
+        }
+    }
+
     p->partkey = index;
 
     agg_str(&colors, (long) P_NAME_SCL, (long) P_NAME_SD, p->name);
@@ -359,12 +377,32 @@ long mk_part(long index, part_t *p) {
 long
 mk_supp(long index, supplier_t *s) {
     long i;
-    /* long bad_press; */
-    /* long noise; */
-    /* long offset; */
-    /* long type; */
+
+    static int next_part_i = 0;
+    static int backup_existing = 0;
+    static int next_subpart_i = 1;
+    static long index_offset = 0;
+
+    static long random_streams[4] = {S_ADDR_SD, S_NTRG_SD, C_PHNE_SD, P_CITY_SD};
+
+    // TODO: somehow the reset for the second of 3 subparts in 012 does not work
+
+    if (is_backup_id(&m_supp_distribution, index, &next_part_i, &backup_existing)) {
+        backup_random_state(random_streams, 4);
+        index_offset = 0;
+    } else if (backup_existing && is_restore_id(&m_supp_distribution, index, next_part_i - 1, next_subpart_i)) {
+        restore_random_state(random_streams, 4);
+        index_offset = m_supp_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
+        if (next_subpart_i == m_supp_distribution.parts[next_part_i - 1].sub_part_count) {
+            next_subpart_i = 1;
+            backup_existing = 0;
+        } else {
+            ++next_subpart_i;
+        }
+    }
+
     s->suppkey = index;
-    sprintf(s->name, S_NAME_FMT, S_NAME_TAG, index);
+    sprintf(s->name, S_NAME_FMT, S_NAME_TAG, index - index_offset);
     s->alen = V_STR(S_ADDR_LEN, S_ADDR_SD, s->address);
     RANDOM(i, 0, nations.count - 1, S_NTRG_SD);
     strcpy(s->nation_name, nations.list[i].text);

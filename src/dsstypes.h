@@ -121,8 +121,6 @@ int pr_supp PROTO((supplier_t * supp, int mode));
 
 int ld_supp PROTO((supplier_t * supp, int mode));
 
-/*todo: add new date table*/
-
 typedef struct {
     long datekey;
     char date[D_DATE_LEN + 1];

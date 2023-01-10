@@ -63,11 +63,11 @@ BEGIN merchant_supplier
 COUNT|7
 0|10
 1|10
-2|10
-01|10
+2|5
+01|5
 02|5
 12|5
-012|50
+012|60
 END merchant_supplier
 BEGIN merchant_part
 COUNT|7
