@@ -97,6 +97,20 @@ void restore_random_state(const long *stream_ids, int cnt) {
     }
 }
 
+void backup_all_random_state() {
+    // TODO: Replace with memcpy
+    for (int i = 0; i < MAX_STREAM + 1; ++i) {
+        seed_backups[i] = Seed[i];
+    }
+}
+
+void restore_all_random_state() {
+    // TODO: Replace with memcpy
+    for (int i = 0; i < MAX_STREAM + 1; ++i) {
+        Seed[i] = seed_backups[i];
+    }
+}
+
 void
 dump_seeds(int tbl) {
     int i;

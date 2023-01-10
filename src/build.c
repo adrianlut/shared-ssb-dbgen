@@ -120,15 +120,8 @@ int lookup_merchant(merchant_distribution * md, long id) {
  * @param id
  * @return
  */
-int is_backup_id(merchant_distribution *md, long id, int *next_part_i, int *backup_existing) {
-    if (md->parts[*next_part_i].start == id) {
-        *backup_existing = (md->parts[*next_part_i].sub_part_count > 1);
-        *next_part_i += 1;
-        if (*next_part_i == md->part_count) *next_part_i = 0; // Prevent out of range access
-        return 1;
-    } else {
-        return 0;
-    }
+int is_backup_id(merchant_distribution *md, long id, int next_part_i) {
+    return (md->parts[next_part_i].start == id);
 }
 
 /**
@@ -138,52 +131,53 @@ int is_backup_id(merchant_distribution *md, long id, int *next_part_i, int *back
  * @return
  */
 int is_restore_id(merchant_distribution *md, long id, int part_i, int sub_part_i) {
-    distribution_part *part = md->parts + part_i;
-    if (id == (part->start + sub_part_i * part->sub_part_size)) {
-        return 1;
-    } else {
-        return 0;
-    }
+    return id == (md->parts[part_i].start + sub_part_i * md->parts[part_i].sub_part_size);
 }
 
-
-
 /**
- * Random streams that capture the state of the customer generator:
- * C_ADDR_SD (address)
- * C_NTRG_SD (nation, region)
- * C_PHNE_SD (phone)
- * C_MSEG_SD (mktsegment)
- * P_CITY_SD (city)
- *
- * Customer name also has to be reset
+ * Creates the customer c with the key index.
  */
-
-long mk_cust(long n_cust, customer_t *c) {
+long mk_cust(long index, customer_t *c) {
 
     static int next_part_i = 0;
+    static int current_part_i = -1;
     static int backup_existing = 0;
     static int next_subpart_i = 1;
-    static long n_cust_offset = 0;
+    static long index_offset = 0;
 
     static long random_streams[5] = {C_ADDR_SD, C_NTRG_SD, C_PHNE_SD, C_MSEG_SD, P_CITY_SD};
 
-    if (is_backup_id(&m_cust_distribution, n_cust, &next_part_i, &backup_existing)) {
-        backup_random_state(random_streams, 5);
-        n_cust_offset = 0;
-    } else if (backup_existing && is_restore_id(&m_cust_distribution, n_cust, next_part_i - 1, next_subpart_i)) {
-        restore_random_state(random_streams, 5);
-        n_cust_offset = m_cust_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
-        if (next_subpart_i == m_cust_distribution.parts[next_part_i - 1].sub_part_count) {
+    if (is_backup_id(&m_cust_distribution, index, next_part_i)) {
+        current_part_i = next_part_i;
+        ++next_part_i;
+        if (next_part_i == m_cust_distribution.part_count) next_part_i = 0; // Prevent out of range access
+        backup_existing = (m_cust_distribution.parts[current_part_i].sub_part_count > 1);
+
+        index_offset = 0;
+        if (backup_existing) {
+            backup_random_state(random_streams, 5);
+            printf("Backup: %ld\n", index);
+        } else {
+            printf("No backup: %ld\n", index);
+        }
+        fflush(stdout);
+    } else if (backup_existing && is_restore_id(&m_cust_distribution, index, current_part_i, next_subpart_i)) {
+        index_offset = m_cust_distribution.parts[current_part_i].sub_part_size * next_subpart_i;
+        ++next_subpart_i;
+        // if next_subpart_i points at the end of the range of subparts, reset it to 1 and set backup_existing to 0 to
+        // not check for restore points from here on.
+        if (next_subpart_i == m_cust_distribution.parts[current_part_i].sub_part_count) {
             next_subpart_i = 1;
             backup_existing = 0;
-        } else {
-            ++next_subpart_i;
         }
+
+        restore_random_state(random_streams, 5);
+        printf("Restore: %ld\n", index);
+        fflush(stdout);
     }
 
-    c->custkey = n_cust;
-    sprintf(c->name, C_NAME_FMT, C_NAME_TAG, n_cust - n_cust_offset);
+    c->custkey = index;
+    sprintf(c->name, C_NAME_FMT, C_NAME_TAG, index - index_offset);
     c->alen = V_STR(C_ADDR_LEN, C_ADDR_SD, c->address);
     long i;
     RANDOM(i, 0, nations.count - 1, C_NTRG_SD);
@@ -192,7 +186,7 @@ long mk_cust(long n_cust, customer_t *c) {
     gen_city(c->city, c->nation_name);
     gen_phone(i, c->phone, (long) C_PHNE_SD);
     pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
-    c->merchant_id = lookup_merchant(&m_cust_distribution, n_cust);
+    c->merchant_id = lookup_merchant(&m_cust_distribution, index);
     return (0);
 }
 
@@ -329,22 +323,37 @@ long mk_part(long index, part_t *p) {
     long mfgr, cat, brnd;
 
     static int next_part_i = 0;
+    static int current_part_i = -1;
     static int backup_existing = 0;
     static int next_subpart_i = 1;
 
     static long random_streams[7] = {P_NAME_SD, P_MFG_SD, P_CAT_SD, P_BRND_SD, P_TYPE_SD, P_SIZE_SD, P_CNTR_SD};
 
-    if (is_backup_id(&m_part_distribution, index, &next_part_i, &backup_existing)) {
-        backup_random_state(random_streams, 7);
-    } else if (backup_existing && is_restore_id(&m_part_distribution, index, next_part_i - 1, next_subpart_i)) {
-        restore_random_state(random_streams, 7);
+    if (is_backup_id(&m_part_distribution, index, next_part_i)) {
+        current_part_i = next_part_i;
+        ++next_part_i;
+        if (next_part_i == m_part_distribution.part_count) next_part_i = 0; // Prevent out of range access
+        backup_existing = (m_part_distribution.parts[current_part_i].sub_part_count > 1);
+
+        if (backup_existing) {
+            backup_random_state(random_streams, 7);
+            printf("Backup: %ld\n", index);
+        } else {
+            printf("No backup: %ld\n", index);
+        }
+        fflush(stdout);
+    } else if (backup_existing && is_restore_id(&m_part_distribution, index, current_part_i, next_subpart_i)) {
         ++next_subpart_i;
         // if next_subpart_i points at the end of the range of subparts, reset it to 1 and set backup_existing to 0 to
         // not check for restore points from here on.
-        if (next_subpart_i == m_part_distribution.parts[next_part_i - 1].sub_part_count) {
+        if (next_subpart_i == m_part_distribution.parts[current_part_i].sub_part_count) {
             next_subpart_i = 1;
             backup_existing = 0;
         }
+
+        restore_random_state(random_streams, 7);
+        printf("Restore: %ld\n", index);
+        fflush(stdout);
     }
 
     p->partkey = index;
@@ -381,25 +390,39 @@ mk_supp(long index, supplier_t *s) {
     long i;
 
     static int next_part_i = 0;
+    static int current_part_i = -1;
     static int backup_existing = 0;
     static int next_subpart_i = 1;
     static long index_offset = 0;
 
     static long random_streams[4] = {S_ADDR_SD, S_NTRG_SD, C_PHNE_SD, P_CITY_SD};
 
-    // TODO: somehow the reset for the second of 3 subparts in 012 does not work
+    if (is_backup_id(&m_supp_distribution, index, next_part_i)) {
+        current_part_i = next_part_i;
+        ++next_part_i;
+        if (next_part_i == m_supp_distribution.part_count) next_part_i = 0; // Prevent out of range access
+        backup_existing = (m_supp_distribution.parts[current_part_i].sub_part_count > 1);
 
-    if (is_backup_id(&m_supp_distribution, index, &next_part_i, &backup_existing)) {
-        backup_random_state(random_streams, 4);
         index_offset = 0;
-    } else if (backup_existing && is_restore_id(&m_supp_distribution, index, next_part_i - 1, next_subpart_i)) {
-        restore_random_state(random_streams, 4);
-        index_offset = m_supp_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
+        if (backup_existing) {
+            backup_random_state(random_streams, 4);
+            printf("Backup: %ld\n", index);
+        } else {
+            printf("No backup: %ld\n", index);
+        }
+        fflush(stdout);
+    } else if (backup_existing && is_restore_id(&m_supp_distribution, index, current_part_i, next_subpart_i)) {
+        index_offset = m_supp_distribution.parts[current_part_i].sub_part_size * next_subpart_i;
         ++next_subpart_i;
-        if (next_subpart_i == m_supp_distribution.parts[next_part_i - 1].sub_part_count) {
+        // if next_subpart_i points at the end of the range of subparts, reset it to 1 and set backup_existing to 0 to
+        // not check for restore points from here on.
+        if (next_subpart_i == m_supp_distribution.parts[current_part_i].sub_part_count) {
             next_subpart_i = 1;
             backup_existing = 0;
         }
+        restore_random_state(random_streams, 4);
+        printf("Restore: %ld\n", index);
+        fflush(stdout);
     }
 
     s->suppkey = index;

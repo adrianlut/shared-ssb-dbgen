@@ -246,7 +246,11 @@ void row_stop(int t);
 
 void backup_random_state(const long *stream_ids, int cnt);
 
+void backup_all_random_state();
+
 void restore_random_state(const long *stream_ids, int cnt);
+
+void restore_all_random_state();
 
 void dump_seeds(int t);
 

@@ -26,7 +26,7 @@ typedef struct {
 } customer_t;
 
 /* customers.c */
-long mk_cust PROTO((long n_cust, customer_t * c));
+long mk_cust PROTO((long index, customer_t * c));
 
 int pr_cust PROTO((customer_t * c, int mode));
 
