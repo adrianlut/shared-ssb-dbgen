@@ -872,7 +872,8 @@ main(int ac, char **av) {
         fprintf(stderr,
                 "%s Population Generator (Version %d.%d.%d%s)\n",
                 NAME, VERSION, RELEASE, MODIFICATION, PATCH);
-        fprintf(stderr, "Copyright %s %s\n", TPC, C_DATES);
+        fprintf(stderr, "Copyright %s %s\n", C_DATES, TPC);
+        fprintf(stderr, "Copyright %s %s\n", "2023", "Adrian Lutsch");
     }
 
     load_dists();

@@ -34,50 +34,46 @@ extern adhoc_t adhocs[];
 ((LEAP(yr) && (mnth) >= 2) ? 1 : 0)
 #define JDAY_BASE       8035    /* start from 1/1/70 a la unix */
 #define JMNTH_BASE      (-70 * 12) /* start from 1/1/70 a la unix */
-#define JDAY(date) ((date) - STARTDATE + JDAY_BASE + 1)
-#define PART_SUPP_BRIDGE(tgt, p, s) \
-    { \
-    long tot_scnt = tdefs[SUPP].base * scale; \
-    tgt = (p + s *  (tot_scnt / SUPP_PER_PART +  \
-    (long) ((p - 1) / tot_scnt))) % tot_scnt + 1; \
-    }
 #define RPRICE_BRIDGE(tgt, p) tgt = rpb_routine(p)
 #define V_STR(avg, sd, tgt)  a_rnd((int)(avg * V_STR_LOW), \
 (int)(avg * V_STR_HGH), sd, tgt)
-#define TEXT(avg, sd, tgt)  \
-dbg_text(tgt, (int)(avg * V_STR_LOW),(int)(avg * V_STR_HGH), sd)
 
-static void gen_phone PROTO((long ind, char *target, long seed));
+/**
+ * generate the numbered order and its associated lineitems
+ */
+void mk_sparse(long i, DSS_HUGE *ok, long seq) {
+    ez_sparse(i, ok, seq);
+}
 
-/* static void gen_category PROTO((char *target, long seed)); */
-int gen_city PROTO((char *cityName, char *nationName));
+/**
+ * the "simple" version of mk_sparse, used on systems with 64b support
+ * and on all systems at SF <= 300G where 32b support is sufficient
+ */
+void ez_sparse(long i, DSS_HUGE *ok, long seq) {
+    long low_bits;
 
-int gen_season PROTO((char * dest, int month, int day));
+    LONG2HUGE(i, ok);
+    low_bits = (long) (i & ((1 << SPARSE_KEEP) - 1));
+    *ok = *ok >> SPARSE_KEEP;
+    *ok = *ok << SPARSE_BITS;
+    *ok += seq;
+    *ok = *ok << SPARSE_KEEP;
+    *ok += low_bits;
+}
 
-int is_last_day_in_month PROTO((int year, int month, int day));
-
-int gen_holiday_fl PROTO((char * dest, int month, int day));
-
-int gen_city PROTO((char *cityName, char *nationName));
-
-int gen_color PROTO((char * source, char * dest));
-
-
-long
-rpb_routine(long p) {
+long rpb_routine(long p) {
     long price;
     price = 90000;
     price += (p / 10) % 20001;        /* limit contribution to $200 */
     price += (p % 1000) * 100;
 
-    return (price);
+    return price;
 }
 
-static void
-gen_phone(long ind, char *target, long seed) {
-    long acode,
-            exchg,
-            number;
+static void gen_phone(long ind, char *target, long seed) {
+    long acode;
+    long exchg;
+    long number;
 
     RANDOM(acode, 100, 999, seed);
     RANDOM(exchg, 100, 999, seed);
@@ -87,23 +83,83 @@ gen_phone(long ind, char *target, long seed) {
     sprintf(target + 7, "%03ld", exchg);
     sprintf(target + 11, "%04ld", number);
     target[2] = target[6] = target[10] = '-';
-    return;
+}
+
+/*bug! <- maybe this was fixed by using a valid seed?*/
+int gen_city(char *cityName, char *nationName) {
+    int i = 0;
+    long randomPick;
+    int nlen = strlen(nationName);
+
+    strncpy(cityName, nationName, CITY_FIX - 1);
+
+    if (nlen < CITY_FIX - 1) {
+        for (i = nlen; i < CITY_FIX - 1; i++)
+            cityName[i] = ' ';
+    }
+    RANDOM(randomPick, 0, 9, P_CITY_SD);
+
+    sprintf(cityName + CITY_FIX - 1, "%ld", randomPick);
+    cityName[CITY_FIX] = '\0';
+    return 0;
 }
 
 /*
-static void
-gen_category(char *target, long seed){
-  long num1,num2;
-  RANDOM(num1,1,5,seed);
-  RANDOM(num2,1,5,seed);
-  strcpy(target,"MFGR");
-  sprintf(target + 4, "%01ld", num1);
-  sprintf(target + 5, "%01ld", num2);
-  return;
-} 
+P_NAME is as long as 55 bytes in TPC-H, which is unreasonably large.
+We reduce it to 22 by limiting to a concatenation of two colors (see [TPC-H], pg 94).
+We also add a new column named P_COLOR that could be used in queries where currently a
+color must be chosen by substring from P_NAME.
 */
+int gen_color(char *source, char *dest) {
+    int i = 0;
+    int j = 0;
+    int clen = 0;
 
-int lookup_merchant(merchant_distribution * md, long id) {
+    while (source[i] != ' ') {
+        dest[i] = source[i];
+        i++;
+    }
+    dest[i] = '\0';
+
+    i++;
+    while (source[i] != '\0') {
+        source[j] = source[i];
+        j++;
+        i++;
+    }
+
+    source[j] = '\0';
+
+    clen = strlen(dest);
+    return clen;
+}
+
+holiday holidays[] = {
+        {"Christmas",     12, 24},
+        {"New Years Day", 1,  1},
+        {"holiday1",      2,  20},
+        {"Easter Day",    4,  20},
+        {"holiday2",      5,  20},
+        {"holiday3",      7,  20},
+        {"holiday4",      8,  20},
+        {"holiday5",      9,  20},
+        {"holiday6",      10, 20},
+        {"holiday7",      11, 20}
+};
+
+int gen_holiday_fl(char *dest, int month, int day) {
+    for (int i = 0; i < NUM_HOLIDAYS; i++) {
+        if (holidays[i].month == month && holidays[i].day == day) {
+            strcpy(dest, "1");
+            return 0;
+        }
+    }
+    strcpy(dest, "0");
+    return 0;
+}
+
+
+int lookup_merchant(const merchant_distribution *md, long id) {
     for (int i = 0; i < md->merchant_count * md->parts_per_merchant; ++i) {
         if (id - md->part_owners[i].last_index <= 0) {
             return md->part_owners[i].owner;
@@ -114,13 +170,31 @@ int lookup_merchant(merchant_distribution * md, long id) {
     return 0;
 }
 
+long key_for_merchant(int merchant_id, const merchant_distribution *md, long random_stream_id) {
+    long rnd;
+    RANDOM(rnd, 1, md->merchant_infos[merchant_id].total_count, random_stream_id);
+
+    long current_index = rnd;
+    int i = 0;
+    for (; i < md->parts_per_merchant; ++i) {
+        current_index -= md->merchant_infos[merchant_id].block_sizes[i];
+        if (current_index <= 0) break;
+    }
+    if (current_index > 0) {
+        printf("Fatal error in key mapping!");
+        exit(1);
+    }
+
+    return md->merchant_infos[merchant_id].end_indexes[i] + current_index;
+}
+
 /**
  * Determines whether the id is the start of a new part with multiple sub-parts according to the given distribution.
  * @param md
  * @param id
  * @return
  */
-int is_backup_id(merchant_distribution *md, long id, int next_part_i) {
+int is_backup_id(const merchant_distribution *md, long id, int next_part_i) {
     return (md->parts[next_part_i].start == id);
 }
 
@@ -133,6 +207,7 @@ int is_backup_id(merchant_distribution *md, long id, int next_part_i) {
 int is_restore_id(merchant_distribution *md, long id, int part_i, int sub_part_i) {
     return id == (md->parts[part_i].start + sub_part_i * md->parts[part_i].sub_part_size);
 }
+
 
 /**
  * Creates the customer c with the key index.
@@ -156,8 +231,8 @@ long mk_cust(long index, customer_t *c) {
         index_offset = 0;
         if (backup_existing) {
             backup_random_state(random_streams, 5);
-            printf("Backup: %ld\n", index);
-        } else {
+            if (verbose > 0) printf("Backup: %ld\n", index);
+        } else if (!backup_existing && verbose > 0) {
             printf("No backup: %ld\n", index);
         }
         fflush(stdout);
@@ -172,7 +247,7 @@ long mk_cust(long index, customer_t *c) {
         }
 
         restore_random_state(random_streams, 5);
-        printf("Restore: %ld\n", index);
+        if (verbose > 0) printf("Restore: %ld\n", index);
         fflush(stdout);
     }
 
@@ -187,65 +262,16 @@ long mk_cust(long index, customer_t *c) {
     gen_phone(i, c->phone, (long) C_PHNE_SD);
     pick_str(&c_mseg_set, C_MSEG_SD, c->mktsegment);
     c->merchant_id = lookup_merchant(&m_cust_distribution, index);
-    return (0);
+    return 0;
 }
 
-
-/*
-* generate the numbered order and its associated lineitems
-*/
-void
-mk_sparse(long i, DSS_HUGE *ok, long seq) {
-    ez_sparse(i, ok, seq);
-    return;
-}
-
-/*
-* the "simple" version of mk_sparse, used on systems with 64b support
-* and on all systems at SF <= 300G where 32b support is sufficient
-*/
-void
-ez_sparse(long i, DSS_HUGE *ok, long seq) {
-    long low_bits;
-
-    LONG2HUGE(i, ok);
-    low_bits = (long) (i & ((1 << SPARSE_KEEP) - 1));
-    *ok = *ok >> SPARSE_KEEP;
-    *ok = *ok << SPARSE_BITS;
-    *ok += seq;
-    *ok = *ok << SPARSE_KEEP;
-    *ok += low_bits;
-}
-
-long key_for_merchant(int merchant_id, merchant_distribution * md, long random_stream_id) {
-    long rnd;
-    RANDOM(rnd, 1, md->merchant_infos[merchant_id].total_count, random_stream_id);
-
-    long current_index = rnd;
-    int i = 0;
-    for (; i < md->parts_per_merchant; ++i) {
-        current_index -= md->merchant_infos[merchant_id].block_sizes[i];
-        if (current_index <= 0) break;
-    }
-    if (current_index > 0) {
-        printf("Fatal error in key mapping!");
-        exit(1);
-    }
-
-    return md->merchant_infos[merchant_id].end_indexes[i] + current_index;
-}
-
-long
-mk_order(long index, order_t *o, long upd_num) {
+long mk_order(long index, order_t *o, long upd_num) {
     long lcnt;
     long rprice;
-    /* long      ocnt; */
     long tmp_date;
     long c_date;
     long clk_num;
-    /* long      supp_num; */
     static char **asc_date = NULL;
-    /* char tmp_str[2]; */
     char **mk_ascdate PROTO((void));
 
     if (asc_date == NULL)
@@ -254,8 +280,7 @@ mk_order(long index, order_t *o, long upd_num) {
     RANDOM(tmp_date, O_ODATE_MIN, O_ODATE_MAX, O_ODATE_SD);
     strcpy(o->odate, asc_date[tmp_date - STARTDATE]);
 
-    mk_sparse(index, o->okey,
-              (upd_num == 0) ? 0 : 1 + upd_num / (10000 / refresh));
+    mk_sparse(index, o->okey, (upd_num == 0) ? 0 : 1 + upd_num / (10000 / refresh));
 
     char merchant_id_str[3];
     pick_str(&m_order, O_MERCHANT_SD, merchant_id_str);
@@ -269,7 +294,6 @@ mk_order(long index, order_t *o, long upd_num) {
     o->spriority = 0;
 
     o->totalprice = 0;
-    /* ocnt = 0; */
 
     RANDOM(o->lines, O_LCNT_MIN, O_LCNT_MAX, O_LCNT_SD);
     for (lcnt = 0; lcnt < o->lines; lcnt++) {
@@ -316,11 +340,13 @@ mk_order(long index, order_t *o, long upd_num) {
     for (lcnt = 0; lcnt < o->lines; lcnt++) {
         o->lineorders[lcnt].order_totalprice = o->totalprice;
     }
-    return (0);
+    return 0;
 }
 
 long mk_part(long index, part_t *p) {
-    long mfgr, cat, brnd;
+    long mfgr;
+    long cat;
+    long brnd;
 
     static int next_part_i = 0;
     static int current_part_i = -1;
@@ -337,8 +363,8 @@ long mk_part(long index, part_t *p) {
 
         if (backup_existing) {
             backup_random_state(random_streams, 7);
-            printf("Backup: %ld\n", index);
-        } else {
+            if (verbose > 0) printf("Backup: %ld\n", index);
+        } else if (!backup_existing && verbose > 0) {
             printf("No backup: %ld\n", index);
         }
         fflush(stdout);
@@ -352,7 +378,7 @@ long mk_part(long index, part_t *p) {
         }
 
         restore_random_state(random_streams, 7);
-        printf("Restore: %ld\n", index);
+        if (verbose > 0) printf("Restore: %ld\n", index);
         fflush(stdout);
     }
 
@@ -381,12 +407,10 @@ long mk_part(long index, part_t *p) {
     pick_str(&p_cntr_set, P_CNTR_SD, p->container);
     p->merchant_id = lookup_merchant(&m_part_distribution, index);
 
-    return (0);
+    return 0;
 }
 
-
-long
-mk_supp(long index, supplier_t *s) {
+long mk_supp(long index, supplier_t *s) {
     long i;
 
     static int next_part_i = 0;
@@ -406,8 +430,8 @@ mk_supp(long index, supplier_t *s) {
         index_offset = 0;
         if (backup_existing) {
             backup_random_state(random_streams, 4);
-            printf("Backup: %ld\n", index);
-        } else {
+            if (verbose > 0) printf("Backup: %ld\n", index);
+        } else if (!backup_existing && verbose > 0) {
             printf("No backup: %ld\n", index);
         }
         fflush(stdout);
@@ -421,7 +445,7 @@ mk_supp(long index, supplier_t *s) {
             backup_existing = 0;
         }
         restore_random_state(random_streams, 4);
-        printf("Restore: %ld\n", index);
+        if (verbose > 0) printf("Restore: %ld\n", index);
         fflush(stdout);
     }
 
@@ -434,7 +458,7 @@ mk_supp(long index, supplier_t *s) {
     gen_city(s->city, s->nation_name);
     gen_phone(i, s->phone, (long) C_PHNE_SD);
     s->merchant_id = lookup_merchant(&m_supp_distribution, index);
-    return (0);
+    return 0;
 }
 
 struct {
@@ -459,9 +483,7 @@ struct {
                 {"NOV", 30, 334},
                 {"DEC", 31, 365}
         };
-
-long
-mk_time(long index, dss_time_t *t) {
+long mk_time(long index, dss_time_t *t) {
     long m = 0;
     long y;
     long d;
@@ -478,101 +500,18 @@ mk_time(long index, dss_time_t *t) {
     t->week = (d + T_START_DAY - 1) / 7 + 1;
     t->day = d - months[m - 1].dcnt - LEAP_ADJ(y, m - 1);
 
-    return (0);
-}
-
-int
-mk_nation(long index, code_t *c) {
-    c->code = index - 1;
-    c->text = nations.list[index - 1].text;
-    c->join = nations.list[index - 1].weight;
-    c->clen = TEXT(N_CMNT_LEN, N_CMNT_SD, c->comment);
-    return (0);
-}
-
-int
-mk_region(long index, code_t *c) {
-
-    c->code = index - 1;
-    c->text = regions.list[index - 1].text;
-    c->join = 0;        /* for completeness */
-    c->clen = TEXT(R_CMNT_LEN, R_CMNT_SD, c->comment);
-    return (0);
-}
-
-
-/*bug! <- maybe this was fixed by using a valid seed?*/
-int gen_city(char *cityName, char *nationName) {
-    int i = 0;
-    long randomPick;
-    /* int clen = strlen(cityName); */
-    int nlen = strlen(nationName);
-
-    strncpy(cityName, nationName, CITY_FIX - 1);
-
-    if (nlen < CITY_FIX - 1) {
-        for (i = nlen; i < CITY_FIX - 1; i++)
-            cityName[i] = ' ';
-    }
-    RANDOM(randomPick, 0, 9, P_CITY_SD);
-
-    sprintf(cityName + CITY_FIX - 1, "%ld", randomPick);
-    cityName[CITY_FIX] = '\0';
     return 0;
 }
-
-
-/*
-P_NAME is as long as 55 bytes in TPC-H, which is unreasonably large.
-We reduce it to 22 by limiting to a concatenation of two colors (see [TPC-H], pg 94).
-We also add a new column named P_COLOR that could be used in queries where currently a 
-color must be chosen by substring from P_NAME.
-*/
-int gen_color(char *source, char *dest) {
-    int i = 0, j = 0;
-    int clen = 0;
-
-    while (source[i] != ' ') {
-        dest[i] = source[i];
-        i++;
-    }
-    dest[i] = '\0';
-
-    i++;
-    while (source[i] != '\0') {
-        source[j] = source[i];
-        j++;
-        i++;
-    }
-
-    source[j] = '\0';
-
-    clen = strlen(dest);
-    return clen;
-}
-
-
 /*Following functions are related to date table generation*/
 int days_in_a_month[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 int days_in_a_month_l[12] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
 season seasons[] = {
         {"Christmas", 1, 11, 31, 12},
         {"Summer",    1, 5,  31, 8},
         {"Winter",    1, 1,  31, 3},
         {"Spring",    1, 4,  30, 4},
         {"Fall",      1, 9,  31, 10}
-};
-holiday holidays[] = {
-        {"Christmas",     12, 24},
-        {"New Years Day", 1,  1},
-        {"holiday1",      2,  20},
-        {"Easter Day",    4,  20},
-        {"holiday2",      5,  20},
-        {"holiday3",      7,  20},
-        {"holiday4",      8,  20},
-        {"holiday5",      9,  20},
-        {"holiday6",      10, 20},
-        {"holiday7",      11, 20}
 };
 
 char *month_names[] = {"January", "February", "March", "April",
@@ -581,8 +520,36 @@ char *month_names[] = {"January", "February", "March", "April",
 
 char *weekday_names[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-/*make the date table, it takes the continuous index , and add index*60*60*24 to 
- *numeric representation 1/1/1992 01:01:01, 
+
+int
+is_last_day_in_month(int year, int month, int day) {
+    int *days;
+    if (LEAP(year))
+        days = days_in_a_month_l;
+    else
+        days = days_in_a_month;
+    if (day == days[month - 1]) return 1;
+    return 0;
+}
+
+int gen_season(char *dest, int month, int day) {
+    for (int i = 0; i < NUM_SEASONS; i++) {
+        season *seas;
+        seas = &seasons[i];
+
+        if (month >= seas->start_month && month <= seas->end_month &&
+            day >= seas->start_day && day <= seas->end_day) {
+            strcpy(dest, seas->name);
+            return 0;
+        }
+    }
+    strcpy(dest, "");
+
+    return 0;
+}
+
+/*make the date table, it takes the continuous index , and add index*60*60*24 to
+ *numeric representation 1/1/1992 01:01:01,
  *then convert the final numeric date time to tm structure, and thus extract other field
  *for date_t structure */
 long
@@ -643,47 +610,6 @@ mk_date(long index, date_t *d) {
     d->slen = strlen(d->sellingseason);
     gen_holiday_fl(d->holidayfl, d->monthnuminyear, d->daynuminmonth);
     return (0);
-}
-
-int gen_holiday_fl(char *dest, int month, int day) {
-    int i;
-    for (i = 0; i < NUM_HOLIDAYS; i++) {
-        if (holidays[i].month == month && holidays[i].day == day) {
-            strcpy(dest, "1");
-            return 0;
-        }
-    }
-    strcpy(dest, "0");
-    return 0;
-}
-
-
-int
-is_last_day_in_month(int year, int month, int day) {
-    int *days;
-    if (LEAP(year))
-        days = days_in_a_month_l;
-    else
-        days = days_in_a_month;
-    if (day == days[month - 1]) return 1;
-    return 0;
-}
-
-int gen_season(char *dest, int month, int day) {
-    int i;
-    for (i = 0; i < NUM_SEASONS; i++) {
-        season *seas;
-        seas = &seasons[i];
-
-        if (month >= seas->start_month && month <= seas->end_month &&
-            day >= seas->start_day && day <= seas->end_day) {
-            strcpy(dest, seas->name);
-            return 0;
-        }
-    }
-    strcpy(dest, "");
-
-    return 0;
 }
 
 

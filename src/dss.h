@@ -7,7 +7,7 @@
 #ifndef DSS_H
 #define  DSS_H
 
-#define NAME            "SSB (Star Schema Benchmark)"
+#define NAME            "Federated SSB (Star Schema Benchmark)"
 #define VERSION           1
 #define RELEASE           0
 #define MODIFICATION      0
