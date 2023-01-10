@@ -124,6 +124,7 @@ int is_backup_id(merchant_distribution *md, long id, int *next_part_i, int *back
     if (md->parts[*next_part_i].start == id) {
         *backup_existing = (md->parts[*next_part_i].sub_part_count > 1);
         *next_part_i += 1;
+        if (*next_part_i == md->part_count) *next_part_i = 0; // Prevent out of range access
         return 1;
     } else {
         return 0;
@@ -138,7 +139,7 @@ int is_backup_id(merchant_distribution *md, long id, int *next_part_i, int *back
  */
 int is_restore_id(merchant_distribution *md, long id, int part_i, int sub_part_i) {
     distribution_part *part = md->parts + part_i;
-    if (id == (part->start + (sub_part_i) * part->sub_part_size)) {
+    if (id == (part->start + sub_part_i * part->sub_part_size)) {
         return 1;
     } else {
         return 0;
@@ -337,11 +338,12 @@ long mk_part(long index, part_t *p) {
         backup_random_state(random_streams, 7);
     } else if (backup_existing && is_restore_id(&m_part_distribution, index, next_part_i - 1, next_subpart_i)) {
         restore_random_state(random_streams, 7);
+        ++next_subpart_i;
+        // if next_subpart_i points at the end of the range of subparts, reset it to 1 and set backup_existing to 0 to
+        // not check for restore points from here on.
         if (next_subpart_i == m_part_distribution.parts[next_part_i - 1].sub_part_count) {
             next_subpart_i = 1;
             backup_existing = 0;
-        } else {
-            ++next_subpart_i;
         }
     }
 
@@ -393,11 +395,10 @@ mk_supp(long index, supplier_t *s) {
     } else if (backup_existing && is_restore_id(&m_supp_distribution, index, next_part_i - 1, next_subpart_i)) {
         restore_random_state(random_streams, 4);
         index_offset = m_supp_distribution.parts[next_part_i - 1].sub_part_size * (next_subpart_i);
+        ++next_subpart_i;
         if (next_subpart_i == m_supp_distribution.parts[next_part_i - 1].sub_part_count) {
             next_subpart_i = 1;
             backup_existing = 0;
-        } else {
-            ++next_subpart_i;
         }
     }
 
