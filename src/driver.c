@@ -355,6 +355,8 @@ void split_dimension(merchant_distribution *target, long total_count, distributi
             }
         }
     }
+
+    free(merchant_counter);
 }
 
 
