@@ -5,7 +5,7 @@ include(CheckTypeSize)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 
-project(ssb-dbgen # SSB benchmark data (and query) generator utilities
+project(shared-ssb-dbgen # SSB benchmark data (and query) generator utilities
 	LANGUAGES C)
 
 if (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "")
