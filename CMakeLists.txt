@@ -18,7 +18,6 @@ set(DATABASE "DB2" CACHE STRING "Command language dialect to target with the qge
 set_property(CACHE DATABASE PROPERTY STRINGS INFORMIX DB2 TDAT SQLSERVER SYBASE)
 
 set(WORKLOAD SSB CACHE STRING "Choice of benchmark / query workload (\"WORKLOAD\")")
-set_property(CACHE WORKLOAD PROPERTY STRINGS TPCH SSB)
 
 set(CSV_OUTPUT_FORMAT OFF CACHE BOOL "Use CSV output format")
 set(EOL_HANDLING OFF CACHE BOOL "Skip separator after the last field in generated lines?")
@@ -116,19 +115,6 @@ add_executable(dbgen
 
 configure_file(dists.dss dists.dss)
 
-add_executable(qgen
-	src/bcd2.c
-	src/bm_utils.c
-	src/build.c
-	src/permute.c
-	src/qgen.c
-	src/rnd.c
-	src/speed_seed.c
-	src/text.c
-	src/varsub.c
-)
-
-
 if (NOT LOG_FUNCTION_EXISTS AND NOT NEED_LINKING_AGAINST_LIBM)
 	# Decide whether or not to link against the C math library (libm);
 	# See: https://stackoverflow.com/q/32816646/1593077
@@ -150,11 +136,10 @@ endif()
 
 if (NEED_LINKING_AGAINST_LIBM)
 	target_link_libraries(dbgen m)
-	target_link_libraries(qgen m)
 endif()
 
 set_property(
-	TARGET dbgen qgen
+	TARGET dbgen
 	APPEND PROPERTY COMPILE_DEFINITIONS
 		DBNAME="dss"
 		${DATABASE}
@@ -162,20 +147,20 @@ set_property(
 		_FILE_OFFSET_BITS=64
 )
 
-set_property(TARGET dbgen qgen PROPERTY C_STANDARD 99)
-set_property(TARGET dbgen qgen PROPERTY C_EXTENSIONS OFF)
+set_property(TARGET dbgen PROPERTY C_STANDARD 99)
+set_property(TARGET dbgen PROPERTY C_EXTENSIONS OFF)
 
 # Note: Defining _POSIX_C_SOURCE=200809L allows the code access to functions defined in the POSIX standard,
 # but not in the C language standard - and such functions _are_ in use in the code.
 if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_OPTIONS -Wall -Wextra -Werror -Wno-missing-field-initializers)
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_DEFINITIONS _POSIX_C_SOURCE=200809L)
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_OPTIONS "/W3")
-    set_property(TARGET dbgen qgen APPEND PROPERTY COMPILE_DEFINITIONS _CRT_NONSTDC_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_OPTIONS "/W3")
+    set_property(TARGET dbgen APPEND PROPERTY COMPILE_DEFINITIONS _CRT_NONSTDC_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)
 endif()
 
 
